@@ -30,13 +30,10 @@ cd atlas
 ./install.sh
 ```
 
-After installation, you can delete the cloned repository if you want—Atlas is installed globally and will continue to work. However, if you plan to use `atlas update`, keep the repository (it needs git to pull updates).
-
 ### Requirements
 
-- [Claude Code](https://claude.ai/product/claude-code) (the `claude` command)
-- Git with configured credentials
-- [GitHub CLI](https://cli.github.com/) (recommended) — enables automatic PR creation and merging
+- [Claude Code](https://claude.ai/product/claude-code)
+- Git
 
 ---
 
