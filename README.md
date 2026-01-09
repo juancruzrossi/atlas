@@ -25,9 +25,7 @@ Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes
 ## Installation
 
 ```bash
-git clone https://github.com/juancruzrossi/atlas.git
-cd atlas
-./install.sh
+curl -sSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh | bash
 ```
 
 ### Requirements
