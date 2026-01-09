@@ -15,7 +15,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SCRIPT_NAME="atlas"
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # Detect ATLAS_HOME (where atlas is installed globally)
 if [[ -f "$HOME/.atlas-home" ]]; then
