@@ -896,8 +896,7 @@ do_update() {
     fi
 
     local current_version="$VERSION"
-    echo -e "  ${DIM}Current version:${NC} $current_version"
-    echo -e "  ${DIM}Installation:${NC}    $ATLAS_HOME"
+    echo -e "  ${DIM}Current version:${NC} v$current_version"
     echo ""
 
     # Download latest version to temp
@@ -967,8 +966,8 @@ do_update() {
     echo ""
     echo -e "${GREEN}${BOLD}  ✓ Atlas updated successfully!${NC}"
     echo ""
-    echo -e "    ${DIM}Old version:${NC} $current_version"
-    echo -e "    ${DIM}New version:${NC} $new_version"
+    echo -e "    ${DIM}Old version:${NC} v$current_version"
+    echo -e "    ${DIM}New version:${NC} v$new_version"
     echo ""
 }
 
