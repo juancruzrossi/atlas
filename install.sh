@@ -67,7 +67,7 @@ if [[ -n "$SCRIPT_DIR" ]] && [[ -f "$SCRIPT_DIR/atlas.sh" ]] && [[ -f "$SCRIPT_D
     SOURCE_DIR="$SCRIPT_DIR"
 else
     # Running from curl pipe - download from GitHub
-    echo -e "${BLUE}Downloading Atlas from GitHub...${NC}"
+    echo -e "${BLUE}Downloading Atlas...${NC}"
 
     TMP_DIR=$(mktemp -d)
     trap "rm -rf $TMP_DIR" EXIT
@@ -160,12 +160,9 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}✓ Atlas installed successfully!${NC}"
 echo ""
-echo -e "  ${DIM}Location:${NC} $INSTALL_DIR"
-echo -e "  ${DIM}Command:${NC}  $SYMLINK_PATH"
-echo ""
 echo -e "${BOLD}Quick start:${NC}"
 echo -e "   ${CYAN}atlas${NC}                 Show help"
 echo -e "   ${CYAN}atlas init${NC}            Initialize in your project"
-echo -e "   ${CYAN}atlas create-backlog${NC}  Generate backlog from codebase"
-echo -e "   ${CYAN}atlas 3${NC}               Process 3 tasks"
+echo -e "   ${CYAN}atlas create-backlog${NC}  Analyze codebase and generate backlog"
+echo -e "   ${CYAN}atlas 3 2${NC}             Process 3 tasks with 2 iterations each"
 echo ""
