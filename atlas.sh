@@ -881,10 +881,12 @@ When done, confirm: 'Backlog created with X tasks (Y high, Z medium, W low)'"
 # UPDATE COMMAND
 # ═══════════════════════════════════════════════════════════════════════════════
 
+REPO_URL="https://github.com/juancruzrossi/atlas"
+
 do_update() {
     clear_screen
-    echo ""
-    echo -e "${BOLD}${WHITE}Checking for Atlas updates...${NC}"
+    show_banner
+    echo -e "${BOLD}${WHITE}Checking for updates...${NC}"
     echo ""
 
     # Verify ATLAS_HOME exists
@@ -893,73 +895,51 @@ do_update() {
         exit 1
     fi
 
-    # Check if ATLAS_HOME is a git repo
-    if [[ ! -d "$ATLAS_HOME/.git" ]]; then
-        echo -e "${YELLOW}Note: Atlas installation is not a git repository${NC}"
-        echo ""
-        echo -e "To enable automatic updates, set up git in your installation:"
-        echo ""
-        echo -e "  ${CYAN}cd $ATLAS_HOME${NC}"
-        echo -e "  ${CYAN}git init${NC}"
-        echo -e "  ${CYAN}git remote add origin https://github.com/YOUR_USERNAME/atlas.git${NC}"
-        echo -e "  ${CYAN}git fetch origin && git reset --hard origin/main${NC}"
-        echo ""
-        echo -e "Or reinstall from a git clone:"
-        echo -e "  ${CYAN}git clone https://github.com/YOUR_USERNAME/atlas.git${NC}"
-        echo -e "  ${CYAN}cd atlas && ./install.sh${NC}"
-        exit 1
-    fi
-
-    # Check if remote is configured
-    if ! git -C "$ATLAS_HOME" remote get-url origin &>/dev/null; then
-        echo -e "${YELLOW}Note: No git remote configured${NC}"
-        echo ""
-        echo -e "Add a remote to enable updates:"
-        echo -e "  ${CYAN}cd $ATLAS_HOME${NC}"
-        echo -e "  ${CYAN}git remote add origin https://github.com/YOUR_USERNAME/atlas.git${NC}"
-        exit 1
-    fi
-
-    cd "$ATLAS_HOME" || exit 1
-
-    # Get current version before update
     local current_version="$VERSION"
-    local current_commit=$(git rev-parse --short HEAD 2>/dev/null)
-
-    echo -e "  ${DIM}Current version:${NC} $current_version ${DIM}($current_commit)${NC}"
+    echo -e "  ${DIM}Current version:${NC} $current_version"
     echo -e "  ${DIM}Installation:${NC}    $ATLAS_HOME"
     echo ""
 
-    # Fetch latest changes
-    echo -e "${CYAN}  ▸ Fetching updates...${NC}"
-    if ! git fetch origin 2>/dev/null; then
-        echo -e "${RED}Error: Failed to fetch updates. Check your internet connection.${NC}"
+    # Download latest version to temp
+    echo -e "${CYAN}  ▸ Downloading latest version...${NC}"
+
+    local tmp_dir=$(mktemp -d)
+    trap "rm -rf $tmp_dir" EXIT
+
+    if command -v curl &> /dev/null; then
+        if ! curl -sSL "${REPO_URL}/archive/main.tar.gz" | tar -xz -C "$tmp_dir" 2>/dev/null; then
+            echo -e "${RED}Error: Failed to download. Check your internet connection.${NC}"
+            exit 1
+        fi
+    elif command -v wget &> /dev/null; then
+        if ! wget -qO- "${REPO_URL}/archive/main.tar.gz" | tar -xz -C "$tmp_dir" 2>/dev/null; then
+            echo -e "${RED}Error: Failed to download. Check your internet connection.${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}Error: curl or wget is required${NC}"
         exit 1
     fi
 
-    # Check if there are updates
-    local local_commit=$(git rev-parse HEAD 2>/dev/null)
-    local remote_commit=$(git rev-parse origin/main 2>/dev/null || git rev-parse origin/master 2>/dev/null)
+    local source_dir="$tmp_dir/atlas-main"
 
-    if [[ "$local_commit" == "$remote_commit" ]]; then
+    if [[ ! -f "$source_dir/atlas.sh" ]]; then
+        echo -e "${RED}Error: Download failed or invalid archive${NC}"
+        exit 1
+    fi
+
+    # Get new version
+    local new_version=$(grep '^VERSION=' "$source_dir/atlas.sh" | cut -d'"' -f2)
+
+    if [[ "$current_version" == "$new_version" ]]; then
         echo ""
-        echo -e "${GREEN}  ✓ Atlas is already up to date!${NC}"
+        echo -e "${GREEN}  ✓ Atlas is already up to date! (v$current_version)${NC}"
         echo ""
         exit 0
     fi
 
-    # Show what's new
     echo ""
-    echo -e "${BOLD}${WHITE}  New changes available:${NC}"
-    echo ""
-    git log --oneline HEAD..origin/main 2>/dev/null | head -10 | while read -r line; do
-        echo -e "    ${DIM}•${NC} $line"
-    done
-
-    local commit_count=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
-    if [[ "$commit_count" -gt 10 ]]; then
-        echo -e "    ${DIM}... and $((commit_count - 10)) more commits${NC}"
-    fi
+    echo -e "${BOLD}${WHITE}  Update available: v$current_version → v$new_version${NC}"
     echo ""
 
     # Confirm update
@@ -971,26 +951,25 @@ do_update() {
         exit 0
     fi
 
-    # Pull updates
+    # Apply update
     echo ""
     echo -e "${CYAN}  ▸ Applying update...${NC}"
-    if git pull origin main 2>/dev/null || git pull origin master 2>/dev/null; then
-        # Get new version
-        source "$ATLAS_HOME/atlas.sh" 2>/dev/null
-        local new_version=$(grep '^VERSION=' "$ATLAS_HOME/atlas.sh" | cut -d'"' -f2)
-        local new_commit=$(git rev-parse --short HEAD 2>/dev/null)
 
-        echo ""
-        echo -e "${GREEN}${BOLD}  ✓ Atlas updated successfully!${NC}"
-        echo ""
-        echo -e "    ${DIM}Old version:${NC} $current_version ${DIM}($current_commit)${NC}"
-        echo -e "    ${DIM}New version:${NC} $new_version ${DIM}($new_commit)${NC}"
-        echo ""
-    else
-        echo -e "${RED}Error: Failed to apply update${NC}"
-        echo -e "Try manually: ${CYAN}cd $ATLAS_HOME && git pull${NC}"
-        exit 1
-    fi
+    cp -f "$source_dir/atlas.sh" "$ATLAS_HOME/"
+    cp -f "$source_dir/atlas-rules.txt" "$ATLAS_HOME/"
+    cp -rf "$source_dir/templates" "$ATLAS_HOME/"
+    [[ -f "$source_dir/README.md" ]] && cp -f "$source_dir/README.md" "$ATLAS_HOME/"
+    [[ -f "$source_dir/CHANGELOG.md" ]] && cp -f "$source_dir/CHANGELOG.md" "$ATLAS_HOME/"
+    [[ -f "$source_dir/CLAUDE.md" ]] && cp -f "$source_dir/CLAUDE.md" "$ATLAS_HOME/"
+
+    chmod +x "$ATLAS_HOME/atlas.sh"
+
+    echo ""
+    echo -e "${GREEN}${BOLD}  ✓ Atlas updated successfully!${NC}"
+    echo ""
+    echo -e "    ${DIM}Old version:${NC} $current_version"
+    echo -e "    ${DIM}New version:${NC} $new_version"
+    echo ""
 }
 
 # No arguments - show welcome
