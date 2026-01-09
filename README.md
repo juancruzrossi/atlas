@@ -35,8 +35,8 @@ After installation, you can delete the cloned repository if you want—Atlas is 
 ### Requirements
 
 - [Claude Code](https://claude.ai/product/claude-code) (the `claude` command)
-- [GitHub CLI](https://cli.github.com/) (the `gh` command) — used for creating and merging PRs
 - Git with configured credentials
+- [GitHub CLI](https://cli.github.com/) (recommended) — enables automatic PR creation and merging
 
 ---
 
