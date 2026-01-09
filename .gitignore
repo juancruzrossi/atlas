@@ -1,0 +1,18 @@
+# Logs
+*.log
+errors_log.txt
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# State files (generated per-project)
+.atlas-state.json
+
+# Debug
+debug/

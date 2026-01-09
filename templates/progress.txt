@@ -1,0 +1,24 @@
+# Progress Log
+
+This file tracks the development progress of the project.
+Atlas automatically adds entries here after completing each task.
+
+Format:
+---
+## YYYY-MM-DD - CODE: Task Title (CATEGORY)
+
+### Summary:
+Brief description of what was implemented.
+
+### Changes:
+- file1: what changed
+- file2: what changed
+
+### PR:
+https://github.com/org/repo/pull/XXX
+
+### Notes for next developer:
+Any important context or gotchas.
+---
+
+================================================================================
