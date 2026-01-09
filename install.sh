@@ -26,7 +26,6 @@ DIM='\033[2m'
 # Config
 REPO_URL="https://github.com/juancruzrossi/atlas"
 INSTALL_DIR="$HOME/.atlas"
-SYMLINK_PATH="/usr/local/bin/atlas"
 ATLAS_HOME_FILE="$HOME/.atlas-home"
 
 show_banner() {
@@ -54,8 +53,13 @@ if ! command -v tar &> /dev/null; then
     exit 1
 fi
 
-# Detect if running from local clone or curl pipe
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" 2>/dev/null )" 2>/dev/null && pwd 2>/dev/null )" || SCRIPT_DIR=""
+# Detect if running from pipe (stdin is not a terminal)
+# AND check if we're in a directory with atlas files
+SCRIPT_DIR=""
+if [[ -t 0 ]]; then
+    # stdin is a terminal, so NOT running from pipe
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" 2>/dev/null )" 2>/dev/null && pwd 2>/dev/null )" || SCRIPT_DIR=""
+fi
 
 if [[ -n "$SCRIPT_DIR" ]] && [[ -f "$SCRIPT_DIR/atlas.sh" ]] && [[ -f "$SCRIPT_DIR/atlas-rules.txt" ]]; then
     # Running from local clone
@@ -117,33 +121,51 @@ chmod +x "$INSTALL_DIR/atlas.sh"
 # Save ATLAS_HOME
 echo "$INSTALL_DIR" > "$ATLAS_HOME_FILE"
 
-# Create symlink
-echo -e "${BLUE}Creating symlink...${NC}"
+# Create symlink - try multiple locations
+echo -e "${BLUE}Creating command...${NC}"
 
-if [[ ! -d "/usr/local/bin" ]]; then
-    sudo mkdir -p /usr/local/bin
+SYMLINK_CREATED=false
+
+# Option 1: /usr/local/bin (requires sudo on most systems)
+if [[ -d "/usr/local/bin" ]] && [[ -w "/usr/local/bin" ]]; then
+    ln -sf "$INSTALL_DIR/atlas.sh" "/usr/local/bin/atlas"
+    SYMLINK_CREATED=true
+    SYMLINK_PATH="/usr/local/bin/atlas"
+elif [[ -d "/usr/local/bin" ]]; then
+    # Try with sudo
+    if sudo -n true 2>/dev/null; then
+        sudo ln -sf "$INSTALL_DIR/atlas.sh" "/usr/local/bin/atlas"
+        SYMLINK_CREATED=true
+        SYMLINK_PATH="/usr/local/bin/atlas"
+    fi
 fi
 
-if [[ -L "$SYMLINK_PATH" ]]; then
-    sudo rm "$SYMLINK_PATH"
-elif [[ -f "$SYMLINK_PATH" ]]; then
-    echo -e "${RED}Error: $SYMLINK_PATH exists and is not a symlink${NC}"
-    echo -e "Remove it manually and run again."
-    exit 1
-fi
+# Option 2: ~/bin (no sudo needed)
+if [[ "$SYMLINK_CREATED" == "false" ]]; then
+    mkdir -p "$HOME/bin"
+    ln -sf "$INSTALL_DIR/atlas.sh" "$HOME/bin/atlas"
+    SYMLINK_CREATED=true
+    SYMLINK_PATH="$HOME/bin/atlas"
 
-sudo ln -s "$INSTALL_DIR/atlas.sh" "$SYMLINK_PATH"
+    # Check if ~/bin is in PATH
+    if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
+        echo ""
+        echo -e "${YELLOW}Note: Add ~/bin to your PATH by adding this to ~/.zshrc or ~/.bashrc:${NC}"
+        echo -e "  ${CYAN}export PATH=\"\$HOME/bin:\$PATH\"${NC}"
+        echo ""
+    fi
+fi
 
 # Done
 echo ""
 echo -e "${GREEN}${BOLD}✓ Atlas installed successfully!${NC}"
+echo ""
+echo -e "  ${DIM}Location:${NC} $INSTALL_DIR"
+echo -e "  ${DIM}Command:${NC}  $SYMLINK_PATH"
 echo ""
 echo -e "${BOLD}Quick start:${NC}"
 echo -e "   ${CYAN}atlas${NC}                 Show help"
 echo -e "   ${CYAN}atlas init${NC}            Initialize in your project"
 echo -e "   ${CYAN}atlas create-backlog${NC}  Generate backlog from codebase"
 echo -e "   ${CYAN}atlas 3${NC}               Process 3 tasks"
-echo ""
-echo -e "${BOLD}Update:${NC}"
-echo -e "   ${CYAN}atlas update${NC}          Update to latest version"
 echo ""
