@@ -964,10 +964,7 @@ do_update() {
     chmod +x "$ATLAS_HOME/atlas.sh"
 
     echo ""
-    echo -e "${GREEN}${BOLD}  ✓ Atlas updated successfully!${NC}"
-    echo ""
-    echo -e "    ${DIM}Old version:${NC} v$current_version"
-    echo -e "    ${DIM}New version:${NC} v$new_version"
+    echo -e "${GREEN}${BOLD}  ✓ Updated to v$new_version${NC}"
     echo ""
 }
 
