@@ -18,26 +18,7 @@
 
 ## What is Atlas?
 
-Atlas is an autonomous task loop agent that processes tasks from a markdown backlog using [Claude Code](https://claude.ai/code). You define what needs to be done, Atlas handles everything else—branches, code, quality checks, PRs, and merges.
-
-```bash
-$ atlas
-```
-
-That's it. Atlas reads your backlog and starts working.
-
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **Autonomous** | Processes tasks without manual intervention |
-| **Quality-First** | Type checks, tests, and verification before completing |
-| **GitFlow** | Branches, commits, PRs, and merges automatically |
-| **Resumable** | Ctrl+C anytime, resume later with `--resume` |
-| **Two Modes** | Auto-select from backlog or natural language prompts |
-| **Iterative** | Retries until quality checks pass |
+Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using [Claude Code](https://claude.ai/product/claude-code). You define what needs to be done, Atlas handles everything else—branches, code, quality checks, PRs, and merges.
 
 ---
 
@@ -49,18 +30,25 @@ cd atlas
 ./install.sh
 ```
 
+After installation, you can delete the cloned repository if you want—Atlas is installed globally and will continue to work. However, if you plan to use `atlas update`, keep the repository (it needs git to pull updates).
+
 ### Requirements
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude`)
-- [GitHub CLI](https://cli.github.com/) (`gh`)
+- [Claude Code](https://claude.ai/product/claude-code) (the `claude` command)
+- [GitHub CLI](https://cli.github.com/) (the `gh` command) — used for creating and merging PRs
 - Git with configured credentials
-- Bash 4.0+
 
 ---
 
 ## Quick Start
 
 ```bash
+# See available commands
+atlas
+
+# Or show detailed help
+atlas --help
+
 # Initialize Atlas in your project
 cd your-project
 atlas init
@@ -68,52 +56,61 @@ atlas init
 # Auto-generate a backlog (optional)
 atlas create-backlog
 
-# Run Atlas
-atlas
+# Process 3 tasks
+atlas 3
 ```
 
 ---
 
 ## Usage
 
-### Basic Syntax
+### Syntax
 
 ```bash
-atlas [tasks] [iterations]
+atlas <tasks> [iterations]
 ```
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `tasks` | Number of tasks to process | 1 |
-| `iterations` | Max attempts per task | 2 |
+| `tasks` | Number of tasks to process | required |
+| `iterations` | Max attempts per task | 1 |
 
 ### Examples
 
 ```bash
-# Process 1 task with up to 2 iterations (default)
+# Show welcome screen and available commands
 atlas
 
-# Process 3 tasks
+# Process 3 tasks (1 iteration each)
 atlas 3
 
-# Process 5 tasks, up to 4 iterations each
-atlas 5 4
+# Process 5 tasks with up to 3 iterations each
+atlas 5 3
 
-# Process a specific task
-atlas "HIGH-001"
-
-# Process tasks matching a description
+# Process tasks matching a description (max 10 tasks)
 atlas "fix all bugs" 10
+
+# Process tasks matching a description (max 5 tasks, 2 iterations each)
+atlas "refactor components" 5 2
 
 # Preview what would run (no changes)
 atlas --dry-run 3
+
+# Show backlog status
+atlas --status
+
+# Resume interrupted session
+atlas --resume
 ```
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `atlas` | Process tasks from backlog |
+| `atlas` | Show welcome screen |
+| `atlas <N>` | Process N tasks from backlog |
+| `atlas <N> <M>` | Process N tasks, up to M iterations each |
+| `atlas "<prompt>" <N>` | Process up to N tasks matching prompt |
 | `atlas init` | Initialize Atlas in current project |
 | `atlas create-backlog` | Analyze codebase and generate backlog |
 | `atlas update` | Update Atlas to latest version |
@@ -125,29 +122,14 @@ atlas --dry-run 3
 
 ## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         ATLAS                                │
-│            Autonomous Task Loop Agent System                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│   📋 Backlog           🔄 Loop                  ✅ Done      │
-│                                                              │
-│   TODO ──────────►  1. Pick task                             │
-│   • HIGH-001        2. Create branch                         │
-│   • MEDIUM-002      3. Implement            ───────────►     │
-│   • LOW-003         4. Quality checks        PR merged       │
-│                     5. Create PR             Task done       │
-│   IN PROGRESS       6. Merge & cleanup                       │
-│   • (current)                                                │
-│                     ↺ Retry if checks fail                   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+Each task goes through two phases:
 
-**Each task goes through:**
-1. **Implement**: Branch → Code → Checks → PR
-2. **Finalize**: Merge → Update Backlog → Cleanup
+1. **Implement**: Create branch → Write code → Run quality checks → Create PR
+2. **Finalize**: Merge PR → Update backlog → Delete branch
+
+If quality checks fail, Atlas retries (up to the iteration limit you set).
+
+**Priority order:** HIGH → MEDIUM → LOW
 
 ---
 
@@ -159,8 +141,8 @@ After `atlas init`:
 your-project/
 └── .atlas/
     ├── backlog.md         # Task backlog
-    ├── project-rules.txt  # Project config
-    ├── progress.txt       # Dev log
+    ├── project-rules.txt  # Project config (how to build, test, etc.)
+    ├── progress.txt       # Development log
     └── logs/              # Execution logs
 ```
 
@@ -185,13 +167,11 @@ your-project/
 ## DONE
 ```
 
-**Priority order:** HIGH → MEDIUM → LOW
-
 ---
 
 ## Configuration
 
-Edit `.atlas/project-rules.txt`:
+Edit `.atlas/project-rules.txt` to tell Atlas how to build and test your project:
 
 ```txt
 PROJECT INFO
@@ -227,15 +207,3 @@ Preferred: Chrome MCP
 
 - [CLAUDE.md](./CLAUDE.md) — Architecture & contributing
 - [CHANGELOG.md](./CHANGELOG.md) — Version history
-
----
-
-## License
-
-MIT
-
----
-
-<p align="center">
-  <sub>Built for developers who'd rather ship than babysit.</sub>
-</p>
