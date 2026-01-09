@@ -1,0 +1,61 @@
+PROJECT RULES - [PROJECT_NAME]
+===============================================================================
+
+PROJECT INFO
+Project Name: [PROJECT_NAME]
+Type: [e.g., Next.js + TypeScript, Python + FastAPI, React + Vite]
+Package Manager: [npm/pnpm/yarn/pip]
+
+===============================================================================
+HOW TO RUN THE PROJECT
+===============================================================================
+
+Development:
+[e.g., npm run dev, uvicorn app.main:app --reload]
+
+Production:
+[e.g., npm run build && npm start, gunicorn app.main:app]
+
+===============================================================================
+TESTING STRATEGY
+===============================================================================
+
+This project has/doesn't have:
+  - Unit tests: [e.g., npm test, pytest]
+  - Integration tests: [e.g., npm run test:integration]
+  - E2E tests: [e.g., npx playwright test, none]
+
+If no tests: Rely on TypeScript/linting and visual verification.
+
+===============================================================================
+TYPE CHECKING
+===============================================================================
+
+Command: [e.g., npm run typecheck, mypy .]
+
+===============================================================================
+VISUAL VERIFICATION TOOLS
+===============================================================================
+
+Preferred: [Chrome MCP / Playwright MCP / None]
+Alternative: [Playwright MCP / Chrome MCP / Manual]
+
+How to verify:
+1. [e.g., Start dev server with npm run dev]
+2. [e.g., Navigate to http://localhost:3000]
+3. [e.g., Check specific pages/functionality]
+
+===============================================================================
+CODE STYLE & CONVENTIONS
+===============================================================================
+
+- [e.g., React functional components with hooks]
+- [e.g., Tailwind CSS for styling]
+- [e.g., Conventional commits in English]
+- [e.g., No console.log in production code]
+
+===============================================================================
+IMPORTANT NOTES
+===============================================================================
+
+[Add any project-specific notes, gotchas, or important context here]
