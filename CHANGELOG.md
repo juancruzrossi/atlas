@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Creates git tag if doesn't exist
   - Creates GitHub Release with notes from CHANGELOG
 
+### Fixed
+- Retry logic now also handles "streaming mode" CLI errors (not just lock conflicts)
+  - These transient errors occur intermittently in non-interactive mode
+  - Same exponential backoff (2s, 4s, 8s) applies
+
 ---
 
 ## [1.1.0] - 2026-01-09

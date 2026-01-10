@@ -139,8 +139,8 @@ get_timeout_cmd() {
 
 TIMEOUT_CMD=$(get_timeout_cmd)
 
-# Run Claude with retry logic for lock acquisition errors
-# This handles the case where multiple Claude Code sessions compete for the version lock
+# Run Claude with retry logic for transient errors
+# Handles: lock conflicts, streaming mode errors, and other CLI startup issues
 run_claude_with_retry() {
     local log_file="$1"
     shift  # Remove log_file from arguments, rest are claude args
@@ -157,20 +157,22 @@ run_claude_with_retry() {
             claude "$@" > "$log_file" 2>&1 || true
         fi
 
-        # Check if it's a lock error
-        if grep -q "Lock acquisition failed" "$log_file" 2>/dev/null; then
+        # Check for transient errors that should trigger retry
+        # - Lock acquisition failed: multiple CC sessions competing
+        # - streaming mode: CLI startup issue in non-interactive mode
+        if grep -qE "Lock acquisition failed|streaming mode" "$log_file" 2>/dev/null; then
             if [[ $attempt -lt $max_retries ]]; then
-                echo -e "    ${YELLOW}↻ Lock conflict detected, retrying in ${retry_delay}s... (attempt $((attempt+1))/$max_retries)${NC}"
+                echo -e "    ${YELLOW}↻ CLI error detected, retrying in ${retry_delay}s... (attempt $((attempt+1))/$max_retries)${NC}"
                 sleep $retry_delay
                 retry_delay=$((retry_delay * 2))  # Exponential backoff: 2s, 4s, 8s
                 attempt=$((attempt + 1))
                 continue
             else
-                echo -e "    ${RED}⚠ Lock conflict persists after $max_retries attempts${NC}"
+                echo -e "    ${RED}⚠ CLI error persists after $max_retries attempts${NC}"
             fi
         fi
 
-        # Success or non-lock error, exit loop
+        # Success or non-retryable error, exit loop
         break
     done
 }
