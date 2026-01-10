@@ -1,6 +1,7 @@
 <p align="center">
   <h1 align="center">ATLAS</h1>
   <p align="center"><strong>Autonomous Task Loop Agent System</strong></p>
+  <p align="center">v1.0.1</p>
   <p align="center">
     <em>Let Claude Code work through your backlog while you focus on what matters</em>
   </p>

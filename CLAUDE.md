@@ -112,15 +112,6 @@ Completed tasks with dates and PR links.
 ## TODO → ## IN PROGRESS → ## DONE
 ```
 
-## Project Configuration
-
-Atlas reads the project's `CLAUDE.md` file (if it exists) for project-specific
-configuration. This is the same file used by Claude Code, so there's no extra
-configuration needed—Atlas automatically uses what you already have.
-
-If your project doesn't have a `CLAUDE.md`, Atlas will work without it. Claude Code
-will analyze the project structure automatically.
-
 ## Quality Checklist
 
 Atlas enforces these checks before accepting `READY_TO_MERGE`:
@@ -241,9 +232,13 @@ After modifying `atlas.sh`:
 
 ## Contributing
 
-**IMPORTANT**: For every change made to this project, you MUST update `CHANGELOG.md`:
+**IMPORTANT**: For every change made to this project:
 
-1. Add your changes under the `[Unreleased]` section
-2. Use the appropriate category: Added, Changed, Deprecated, Removed, Fixed, Security
-3. When releasing, move unreleased changes to a new version section with date
-4. Follow [Keep a Changelog](https://keepachangelog.com/) format
+1. **CHANGELOG.md**: Add changes under `[Unreleased]` section
+   - Use categories: Added, Changed, Deprecated, Removed, Fixed, Security
+   - Follow [Keep a Changelog](https://keepachangelog.com/) format
+
+2. **When releasing a new version**:
+   - Move `[Unreleased]` changes to a new version section with date
+   - Update `VERSION` in `atlas.sh` (line ~18)
+   - Update version badge/number in `README.md` if displayed
