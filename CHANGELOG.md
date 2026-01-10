@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Atlas now reads `CLAUDE.md` from project root (if exists) for project configuration
   - No separate configuration file needed—uses the same file Claude Code uses
   - If no `CLAUDE.md` exists, Atlas works without it (CC analyzes project automatically)
+- Cleaned up unnecessary output messages during `atlas init`
+- Added version number to README.md header
+- Updated contributing guidelines in CLAUDE.md (changelog + version updates)
 
 ### Removed
 - `templates/project-rules.txt` template file
