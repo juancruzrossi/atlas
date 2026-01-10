@@ -279,3 +279,18 @@ Follow **Semantic Versioning** (MAJOR.MINOR.PATCH):
 - `atlas.sh` (VERSION variable)
 - `CHANGELOG.md` (release section)
 - `README.md` (display badge)
+
+### 3. Before merging to main (CRITICAL)
+**ALWAYS check before creating a PR to main:**
+
+1. Read `CHANGELOG.md` and check if `[Unreleased]` section has content
+2. If `[Unreleased]` is NOT empty:
+   - Ask the user: "Hay cambios en [Unreleased]. ¿Querés que cree una release?"
+   - If YES: Follow the release checklist (step 2 above)
+   - If NO: Proceed without creating release (content stays in [Unreleased])
+3. If `[Unreleased]` IS empty: Proceed normally
+
+**Why this matters**: Merging changes to main without creating a release means:
+- VERSION stays the same → GitHub Action won't create a new release
+- Changes are in main but not in any release
+- Users running `atlas update` won't get the changes until next release
