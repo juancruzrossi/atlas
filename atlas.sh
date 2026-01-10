@@ -249,10 +249,6 @@ get_total_count() {
     fi
 }
 
-is_git_repo() {
-    git rev-parse --git-dir > /dev/null 2>&1
-}
-
 save_state() {
     cat > "$STATE_FILE" << EOF
 {

@@ -7,6 +7,9 @@ Read carefully and follow ALL rules precisely.
 IMPORTANT: Read the project's CLAUDE.md (if provided) for project-specific
 configuration (how to run the project, testing strategy, code style, etc.)
 
+NOTE: If the project has no git repository initialized, skip all git/branch/PR
+operations and simply implement the changes directly. Don't stop working.
+
 ===============================================================================
 SECTION 1: ITERATION MODES
 ===============================================================================
