@@ -261,19 +261,21 @@ Follow **Semantic Versioning** (MAJOR.MINOR.PATCH):
 - **MINOR** (1.0.0 → 1.1.0): New features (backwards compatible)
 - **PATCH** (1.0.0 → 1.0.1): Bug fixes only
 
-**Release checklist**:
-1. Move `[Unreleased]` section to new version with date
+**Release checklist** (in a single PR):
+1. Move `[Unreleased]` section to new version with date:
    ```markdown
    ## [1.2.0] - 2026-01-15
    ```
 2. Update `VERSION` in `atlas.sh` (line ~18): `VERSION="1.2.0"`
-3. Update version badge in `README.md`: `v1.2.0`
-4. Create git tag: `git tag v1.2.0`
-5. Create PR with release changes
-6. After merge, push tag: `git push origin v1.2.0`
+3. Update version in `README.md` header: `v1.2.0`
+4. Merge PR to main
+
+**Automatic release**: After merge, GitHub Action (`.github/workflows/release.yml`) will:
+- Detect the new VERSION
+- Create git tag `v1.2.0`
+- Create GitHub Release with notes from CHANGELOG
 
 **Important**: Version number must match across:
 - `atlas.sh` (VERSION variable)
 - `CHANGELOG.md` (release section)
 - `README.md` (display badge)
-- Git tags (v1.2.0)
