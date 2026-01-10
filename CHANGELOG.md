@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Simplified interrupt message (removed redundant "signal received")
+- **BREAKING**: Removed `project-rules.txt` in favor of using project's `CLAUDE.md`
+  - Atlas now reads `CLAUDE.md` from project root (if exists) for project configuration
+  - No separate configuration file needed—uses the same file Claude Code uses
+  - If no `CLAUDE.md` exists, Atlas works without it (CC analyzes project automatically)
+
+### Removed
+- `templates/project-rules.txt` template file
+- `PROJECT_RULES_FILE` validation (no longer required)
 
 ---
 

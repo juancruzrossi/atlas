@@ -4,8 +4,8 @@ ATLAS AGENT RULES
 This document defines the core rules for the Atlas autonomous development agent.
 Read carefully and follow ALL rules precisely.
 
-IMPORTANT: Also read project-rules.txt for project-specific configuration
-(how to run the project, testing strategy, code style, etc.)
+IMPORTANT: Read the project's CLAUDE.md (if provided) for project-specific
+configuration (how to run the project, testing strategy, code style, etc.)
 
 ===============================================================================
 SECTION 1: ITERATION MODES
@@ -27,8 +27,8 @@ as ITERATION_MODE=implement or ITERATION_MODE=finalize.
 |   * Make commits with conventional commit messages                         |
 |   * Push branch to remote                                                  |
 |   * Create Pull Request                                                    |
-|   * Run quality checks (see Section 4 + project-rules.txt)                 |
-|   * Use visual verification tools (see project-rules.txt)                  |
+|   * Run quality checks (see Section 4 + CLAUDE.md)                 |
+|   * Use visual verification tools (see CLAUDE.md)                  |
 |                                                                             |
 | FORBIDDEN actions (CRITICAL!):                                              |
 |   X DO NOT merge the PR                                                    |
@@ -145,7 +145,7 @@ SECTION 4: QUALITY CHECKLIST (CRITICAL!)
 You MUST verify quality before outputting READY_TO_MERGE.
 Be HONEST - if any check fails, iterate and fix it instead of lying.
 
-NOTE: Check project-rules.txt for:
+NOTE: Check CLAUDE.md for:
   - Specific commands to run (typecheck, lint, tests)
   - How to run the project for visual testing
   - Which visual verification tools to use
@@ -155,7 +155,7 @@ NOTE: Check project-rules.txt for:
 +-----------------------------------------------------------------------------+
 |                                                                             |
 | 1. COMPILATION / TYPE CHECKING                                              |
-|    Run the command specified in project-rules.txt                          |
+|    Run the command specified in CLAUDE.md                          |
 |    Must: Exit with code 0, no errors                                       |
 |    If fails: Fix all errors before proceeding                              |
 |                                                                             |
@@ -167,10 +167,10 @@ NOTE: Check project-rules.txt for:
 | 3. NO BROKEN EXISTING FUNCTIONALITY                                         |
 |    Check: Existing pages/functionality still works                         |
 |    Check: No console errors on existing pages                              |
-|    Use: Visual verification tool from project-rules.txt                    |
+|    Use: Visual verification tool from CLAUDE.md                    |
 |                                                                             |
 | 4. VISUAL VERIFICATION                                                      |
-|    Use: Tool specified in project-rules.txt                                |
+|    Use: Tool specified in CLAUDE.md                                |
 |    Check: UI renders correctly (no broken layouts)                         |
 |    Check: Responsive design works (if applicable)                          |
 |    Check: No visual regressions on related pages                           |
@@ -210,7 +210,7 @@ NOTE: Check project-rules.txt for:
 | 9. CODE CONSISTENCY                                                         |
 |    Follow: Existing patterns in the codebase                               |
 |    Match: Naming conventions used in project                               |
-|    Read: project-rules.txt for code style guidelines                       |
+|    Read: CLAUDE.md for code style guidelines                       |
 |    Keep: File structure consistent with existing code                      |
 |                                                                             |
 +-----------------------------------------------------------------------------+
@@ -230,12 +230,12 @@ SECTION 5: IMPLEMENTATION GUIDELINES
 Code Quality:
 - Follow existing code patterns in the codebase
 - Read CLAUDE.md files for project-specific instructions
-- Read project-rules.txt for this project's conventions
+- Read CLAUDE.md for this project's conventions
 - Write clean, maintainable code
 - Add comments only where logic is not self-evident
 
 Frontend Tasks:
-- Check project-rules.txt for UI component guidelines
+- Check CLAUDE.md for UI component guidelines
 - Maintain consistency with existing design patterns
 - Test responsive behavior (mobile and desktop) if applicable
 
@@ -389,16 +389,16 @@ QUICK REFERENCE
 ===============================================================================
 
 IMPLEMENT MODE CHECKLIST:
-[ ] Read project-rules.txt for project-specific config
+[ ] Read CLAUDE.md for project-specific config
 [ ] Check IN PROGRESS section first, then TODO
 [ ] Move task to IN PROGRESS in backlog.md
 [ ] Create feature branch
 [ ] Implement task
-[ ] QUALITY CHECKS (Section 4 + project-rules.txt):
-    [ ] Run type/compilation check (see project-rules.txt)
+[ ] QUALITY CHECKS (Section 4 + CLAUDE.md):
+    [ ] Run type/compilation check (see CLAUDE.md)
     [ ] Verify no broken imports
     [ ] Check existing functionality still works
-    [ ] Visual verification (see project-rules.txt)
+    [ ] Visual verification (see CLAUDE.md)
     [ ] Consider edge cases (empty, error, loading states)
     [ ] Check for performance issues
     [ ] Ensure proper error handling
