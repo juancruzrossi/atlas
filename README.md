@@ -136,7 +136,6 @@ After `atlas init`:
 your-project/
 └── .atlas/
     ├── backlog.md         # Task backlog
-    ├── project-rules.txt  # Project config (how to build, test, etc.)
     ├── progress.txt       # Development log
     └── logs/              # Execution logs
 ```
@@ -166,24 +165,11 @@ your-project/
 
 ## Configuration
 
-Edit `.atlas/project-rules.txt` to tell Atlas how to build and test your project:
+Atlas reads your project's `CLAUDE.md` file (if it exists) to understand your project.
+This is the same file used by Claude Code, so there's nothing extra to configure.
 
-```txt
-PROJECT INFO
-Project Name: My App
-Type: Next.js + TypeScript
-
-HOW TO RUN
-Development: npm run dev
-Build: npm run build
-
-TESTING
-Unit tests: npm test
-Type check: npm run typecheck
-
-VISUAL VERIFICATION
-Preferred: Chrome MCP
-```
+If your project doesn't have a `CLAUDE.md`, Atlas will work without it—Claude Code
+will analyze the project structure automatically.
 
 ---
 

@@ -14,16 +14,16 @@ atlas/                    # Installation directory (global)
 ├── atlas-rules.txt       # Core agent rules (generic, don't modify)
 ├── install.sh            # Global installer script
 ├── templates/            # Templates for project initialization
-│   ├── project-rules.txt # Project configuration template
 │   ├── backlog.md        # Backlog template
 │   └── progress.txt      # Progress log template
 └── README.md
 
 .atlas/                   # Per-project directory (created by `atlas init`)
-├── project-rules.txt     # Project-specific configuration
 ├── backlog.md            # Task backlog
 ├── progress.txt          # Development log
 └── logs/                 # Execution logs
+
+Note: Atlas reads the project's CLAUDE.md (if exists) for project context.
 ```
 
 ### Key Concepts
@@ -39,7 +39,7 @@ atlas/                    # Installation directory (global)
 |------|-------|---------|
 | `atlas.sh` | Global | Bash orchestrator - handles CLI, loops, Claude invocations |
 | `atlas-rules.txt` | Global | Agent behavior rules - iteration modes, quality checks, GitFlow |
-| `project-rules.txt` | Per-project | Project config - commands, testing, conventions |
+| `CLAUDE.md` | Per-project | Project config (optional) - read from project root if exists |
 | `backlog.md` | Per-project | Task backlog with TODO/IN PROGRESS/DONE/DELAYED sections |
 | `progress.txt` | Per-project | Development log with completed tasks |
 
@@ -112,38 +112,14 @@ Completed tasks with dates and PR links.
 ## TODO → ## IN PROGRESS → ## DONE
 ```
 
-## Project Rules Format
+## Project Configuration
 
-The `project-rules.txt` file contains project-specific configuration:
+Atlas reads the project's `CLAUDE.md` file (if it exists) for project-specific
+configuration. This is the same file used by Claude Code, so there's no extra
+configuration needed—Atlas automatically uses what you already have.
 
-```txt
-PROJECT RULES - My Project
-═══════════════════════════════════════════════════════════════════════════════
-
-PROJECT INFO
-Project Name: My App
-Type: Next.js + TypeScript
-Package Manager: pnpm
-
-HOW TO RUN THE PROJECT
-Development: npm run dev
-Production: npm run build && npm start
-
-TESTING STRATEGY
-  - Unit tests: npm test
-  - E2E tests: (none)
-
-TYPE CHECKING
-Command: pnpm typecheck
-
-VISUAL VERIFICATION TOOLS
-Preferred: Chrome MCP
-Alternative: Playwright MCP
-
-CODE STYLE & CONVENTIONS
-- React functional components
-- Tailwind CSS
-```
+If your project doesn't have a `CLAUDE.md`, Atlas will work without it. Claude Code
+will analyze the project structure automatically.
 
 ## Quality Checklist
 
@@ -232,7 +208,7 @@ Atlas uses several strategies to minimize execution time:
 - This prevents context overflow while reducing re-processing within the same task
 
 ### Prompt Optimization
-- **Iteration 1**: Full prompt with all `@files` (rules, project-rules, backlog, progress)
+- **Iteration 1**: Full prompt with all `@files` (rules, CLAUDE.md if exists, backlog, progress)
 - **Iterations 2+**: Short prompt WITHOUT `@files` (already in context via `--continue`)
 - This saves significant tokens and processing time on subsequent iterations
 
