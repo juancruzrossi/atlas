@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - `templates/project-rules.txt` template file
 - `PROJECT_RULES_FILE` validation (no longer required)
+- Unused `is_git_repo()` function (dead code)
+
+### Fixed
+- Atlas now works on projects without git (skips git/branch/PR operations)
 
 ---
 
