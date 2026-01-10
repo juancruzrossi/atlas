@@ -15,7 +15,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SCRIPT_NAME="atlas"
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 # Detect ATLAS_HOME (where atlas is installed globally)
 if [[ -f "$HOME/.atlas-home" ]]; then
@@ -162,12 +162,13 @@ run_claude_with_retry() {
         # - streaming mode: CLI startup issue in non-interactive mode
         if grep -qE "Lock acquisition failed|streaming mode" "$log_file" 2>/dev/null; then
             if [[ $attempt -lt $max_retries ]]; then
-                echo -e "    ${YELLOW}↻ CLI error detected, retrying in ${retry_delay}s... (attempt $((attempt+1))/$max_retries)${NC}"
+                # Silent retry - don't bother user with transient errors
                 sleep $retry_delay
                 retry_delay=$((retry_delay * 2))  # Exponential backoff: 2s, 4s, 8s
                 attempt=$((attempt + 1))
                 continue
             else
+                # Only show error if all retries failed
                 echo -e "    ${RED}⚠ CLI error persists after $max_retries attempts${NC}"
             fi
         fi

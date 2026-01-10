@@ -7,11 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.2.0] - 2026-01-09
+
 ### Added
 - GitHub Action for automatic releases on merge to main
   - Reads VERSION from atlas.sh
   - Creates git tag if doesn't exist
   - Creates GitHub Release with notes from CHANGELOG
+
+### Changed
+- Silent retry for transient CLI errors (no user-visible messages unless all retries fail)
+  - Previously showed "CLI error detected, retrying..." on each attempt
+  - Now silently retries and only shows error after 3 failed attempts
 
 ### Fixed
 - Retry logic now also handles "streaming mode" CLI errors (not just lock conflicts)
