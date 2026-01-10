@@ -34,7 +34,7 @@ TEMPLATES_DIR="$ATLAS_HOME/templates"
 
 # File paths - Project specific (in .atlas/ of current project)
 ATLAS_PROJECT_DIR="$PROJECT_DIR/.atlas"
-PROJECT_RULES_FILE="$ATLAS_PROJECT_DIR/project-rules.txt"
+PROJECT_CLAUDE_MD="$PROJECT_DIR/CLAUDE.md"  # Optional: project's own CLAUDE.md
 BACKLOG_FILE="$ATLAS_PROJECT_DIR/backlog.md"
 PROGRESS_FILE="$ATLAS_PROJECT_DIR/progress.txt"
 LOG_DIR="$ATLAS_PROJECT_DIR/logs"
@@ -312,7 +312,6 @@ show_welcome() {
         echo -e "   ${CYAN}$SCRIPT_NAME init${NC}    Initialize Atlas in this directory"
         echo ""
         echo -e "${DIM}This will create a .atlas/ directory with:${NC}"
-        echo -e "   ${DIM}- project-rules.txt (your project configuration)${NC}"
         echo -e "   ${DIM}- backlog.md (your task backlog)${NC}"
         echo -e "   ${DIM}- progress.txt (development log)${NC}"
         echo ""
@@ -457,10 +456,13 @@ show_help() {
     echo -e "    task completes in 1 iteration, it won't waste more."
     echo ""
     echo -e "${BOLD}${WHITE}FILES${NC} ${DIM}(in .atlas/)${NC}"
-    echo -e "    ${YELLOW}project-rules.txt${NC}   Project-specific config (customize this!)"
     echo -e "    ${YELLOW}backlog.md${NC}          Task backlog with TODO/IN PROGRESS/DONE sections"
     echo -e "    ${YELLOW}progress.txt${NC}        Development progress log"
     echo -e "    ${YELLOW}logs/${NC}               Execution logs for each iteration"
+    echo ""
+    echo -e "${BOLD}${WHITE}PROJECT CONTEXT${NC}"
+    echo -e "    Atlas reads ${YELLOW}CLAUDE.md${NC} from your project root (if it exists)"
+    echo -e "    for project-specific configuration and conventions."
     echo ""
     echo -e "${BOLD}${WHITE}SIGNALS${NC}"
     echo -e "    ${RED}Ctrl+C${NC}             Graceful shutdown, saves state for resume"
@@ -697,7 +699,6 @@ do_init() {
     mkdir -p "$LOG_DIR"
 
     # Copy templates
-    cp "$TEMPLATES_DIR/project-rules.txt" "$PROJECT_RULES_FILE"
     cp "$TEMPLATES_DIR/backlog.md" "$BACKLOG_FILE"
     cp "$TEMPLATES_DIR/progress.txt" "$PROGRESS_FILE"
 
@@ -711,23 +712,27 @@ do_init() {
     fi
 
     # Replace placeholders in templates
-    sed -i '' "s/\[PROJECT_NAME\]/$PROJECT_NAME/g" "$PROJECT_RULES_FILE" 2>/dev/null || \
-        sed -i "s/\[PROJECT_NAME\]/$PROJECT_NAME/g" "$PROJECT_RULES_FILE"
     sed -i '' "s/\[PROJECT_NAME\]/$PROJECT_NAME/g" "$BACKLOG_FILE" 2>/dev/null || \
         sed -i "s/\[PROJECT_NAME\]/$PROJECT_NAME/g" "$BACKLOG_FILE"
 
     echo -e "${GREEN}✓${NC} Created .atlas/ directory"
-    echo -e "${GREEN}✓${NC} Created project-rules.txt"
     echo -e "${GREEN}✓${NC} Created backlog.md"
     echo -e "${GREEN}✓${NC} Created progress.txt"
     echo -e "${GREEN}✓${NC} Created logs/"
+
+    # Check for CLAUDE.md
+    if [[ -f "$PROJECT_CLAUDE_MD" ]]; then
+        echo -e "${GREEN}✓${NC} Found CLAUDE.md (will use for project context)"
+    else
+        echo -e "${YELLOW}!${NC} No CLAUDE.md found (Atlas will analyze project on first run)"
+    fi
+
     echo ""
     echo -e "${BOLD}${GREEN}Atlas initialized successfully!${NC}"
     echo ""
     echo -e "${BOLD}Next steps:${NC}"
-    echo -e "   1. Edit ${YELLOW}.atlas/project-rules.txt${NC} with your project configuration"
-    echo -e "   2. Add tasks to ${YELLOW}.atlas/backlog.md${NC}"
-    echo -e "   3. Run ${CYAN}atlas 1${NC} to process your first task"
+    echo -e "   1. Add tasks to ${YELLOW}.atlas/backlog.md${NC}"
+    echo -e "   2. Run ${CYAN}atlas 1${NC} to process your first task"
     echo ""
 }
 
@@ -1200,13 +1205,6 @@ fi
 mkdir -p "$LOG_DIR"
 
 # Validate project files exist
-if [[ ! -f "$PROJECT_RULES_FILE" ]]; then
-    echo -e "${RED}Error: Project rules file not found: $PROJECT_RULES_FILE${NC}"
-    echo -e ""
-    echo -e "Run ${CYAN}atlas init${NC} to recreate project files."
-    exit 1
-fi
-
 if [[ ! -f "$BACKLOG_FILE" ]]; then
     echo -e "${RED}Error: Backlog file not found: $BACKLOG_FILE${NC}"
     echo -e ""
@@ -1234,6 +1232,13 @@ EOF
 fi
 
 # Note: jq is no longer required since we use backlog.md (Markdown format)
+
+# Build context files string (includes CLAUDE.md if it exists)
+if [[ -f "$PROJECT_CLAUDE_MD" ]]; then
+    CONTEXT_FILES="@$RULES_FILE @$PROJECT_CLAUDE_MD @$BACKLOG_FILE @$PROGRESS_FILE"
+else
+    CONTEXT_FILES="@$RULES_FILE @$BACKLOG_FILE @$PROGRESS_FILE"
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAIN EXECUTION
@@ -1286,7 +1291,7 @@ for ((f=$current_task; f<=$TASKS; f++)); do
             # FIRST ITERATION: Full prompt with all @files
             if [[ "$MODE" == "prompt" ]]; then
                 # PROMPT MODE: Claude interprets the user's request
-                IMPLEMENT_PROMPT="@$RULES_FILE @$PROJECT_RULES_FILE @$BACKLOG_FILE @$PROGRESS_FILE
+                IMPLEMENT_PROMPT="$CONTEXT_FILES
 
 ITERATION_MODE=implement
 CURRENT_ITERATION=$i
@@ -1330,7 +1335,7 @@ COMPLETION RULES (CRITICAL - DO NOT LIE):
 - Being honest saves iterations - lying wastes them"
             else
                 # BACKLOG MODE: Let Claude pick the next task from TODO
-                IMPLEMENT_PROMPT="@$RULES_FILE @$PROJECT_RULES_FILE @$BACKLOG_FILE @$PROGRESS_FILE
+                IMPLEMENT_PROMPT="$CONTEXT_FILES
 
 ITERATION_MODE=implement
 CURRENT_ITERATION=$i
@@ -1490,7 +1495,7 @@ Remember: Do NOT merge PR, do NOT move to DONE (wait for finalize phase)."
     finalize_log="$LOG_DIR/task_${f}_finalize_$(date '+%Y%m%d_%H%M%S').log"
 
     # FINALIZE PROMPT: Same for both modes (Claude finds what's in IN PROGRESS)
-    FINALIZE_PROMPT="@$RULES_FILE @$PROJECT_RULES_FILE @$BACKLOG_FILE @$PROGRESS_FILE
+    FINALIZE_PROMPT="$CONTEXT_FILES
 
 ITERATION_MODE=finalize
 TASK_NUMBER=$f
