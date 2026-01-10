@@ -719,14 +719,6 @@ do_init() {
     echo -e "${GREEN}✓${NC} Created backlog.md"
     echo -e "${GREEN}✓${NC} Created progress.txt"
     echo -e "${GREEN}✓${NC} Created logs/"
-
-    # Check for CLAUDE.md
-    if [[ -f "$PROJECT_CLAUDE_MD" ]]; then
-        echo -e "${GREEN}✓${NC} Found CLAUDE.md (will use for project context)"
-    else
-        echo -e "${YELLOW}!${NC} No CLAUDE.md found (Atlas will analyze project on first run)"
-    fi
-
     echo ""
     echo -e "${BOLD}${GREEN}Atlas initialized successfully!${NC}"
     echo ""
