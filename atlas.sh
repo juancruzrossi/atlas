@@ -82,7 +82,7 @@ cleanup() {
     reset_terminal
 
     echo ""
-    log WARN "🛑 Atlas interrupted (signal received)"
+    log WARN "🛑 Atlas interrupted"
     log INFO "Cleaning up..."
 
     # Kill any Claude process we might have started
@@ -138,6 +138,42 @@ get_timeout_cmd() {
 }
 
 TIMEOUT_CMD=$(get_timeout_cmd)
+
+# Run Claude with retry logic for lock acquisition errors
+# This handles the case where multiple Claude Code sessions compete for the version lock
+run_claude_with_retry() {
+    local log_file="$1"
+    shift  # Remove log_file from arguments, rest are claude args
+
+    local max_retries=3
+    local retry_delay=2
+    local attempt=1
+
+    while [[ $attempt -le $max_retries ]]; do
+        # Execute Claude
+        if [[ -n "$TIMEOUT_CMD" ]]; then
+            $TIMEOUT_CMD "${CLAUDE_TIMEOUT}s" claude "$@" > "$log_file" 2>&1 || true
+        else
+            claude "$@" > "$log_file" 2>&1 || true
+        fi
+
+        # Check if it's a lock error
+        if grep -q "Lock acquisition failed" "$log_file" 2>/dev/null; then
+            if [[ $attempt -lt $max_retries ]]; then
+                echo -e "    ${YELLOW}↻ Lock conflict detected, retrying in ${retry_delay}s... (attempt $((attempt+1))/$max_retries)${NC}"
+                sleep $retry_delay
+                retry_delay=$((retry_delay * 2))  # Exponential backoff: 2s, 4s, 8s
+                attempt=$((attempt + 1))
+                continue
+            else
+                echo -e "    ${RED}⚠ Lock conflict persists after $max_retries attempts${NC}"
+            fi
+        fi
+
+        # Success or non-lock error, exit loop
+        break
+    done
+}
 
 # Check if backlog only has template/placeholder tasks (tasks with [...] in title)
 is_template_only_backlog() {
@@ -1374,10 +1410,11 @@ Remember: Do NOT merge PR, do NOT move to DONE (wait for finalize phase)."
         echo -e "    ${DIM}Claude is working...${NC}"
         iter_start=$(date +%s)
 
-        if [[ -n "$TIMEOUT_CMD" ]]; then
-            $TIMEOUT_CMD "${CLAUDE_TIMEOUT}s" claude $CONTINUE_FLAG --permission-mode bypassPermissions -p "$IMPLEMENT_PROMPT" > "$iter_log" 2>&1 || true
+        # Use retry logic to handle lock conflicts with other Claude Code sessions
+        if [[ -n "$CONTINUE_FLAG" ]]; then
+            run_claude_with_retry "$iter_log" $CONTINUE_FLAG --permission-mode bypassPermissions -p "$IMPLEMENT_PROMPT"
         else
-            claude $CONTINUE_FLAG --permission-mode bypassPermissions -p "$IMPLEMENT_PROMPT" > "$iter_log" 2>&1 || true
+            run_claude_with_retry "$iter_log" --permission-mode bypassPermissions -p "$IMPLEMENT_PROMPT"
         fi
 
         # Reset terminal after Claude (disable focus reporting)
@@ -1489,11 +1526,8 @@ If there's no PR to merge (error state), output: <promise>NO_PR_FOUND</promise>"
     # Note: Finalize is always a NEW session (no --continue) to avoid context buildup
     echo -e "    ${DIM}Merging PR and updating backlog...${NC}"
 
-    if [[ -n "$TIMEOUT_CMD" ]]; then
-        $TIMEOUT_CMD "${CLAUDE_TIMEOUT}s" claude --model sonnet --permission-mode bypassPermissions -p "$FINALIZE_PROMPT" > "$finalize_log" 2>&1 || true
-    else
-        claude --model sonnet --permission-mode bypassPermissions -p "$FINALIZE_PROMPT" > "$finalize_log" 2>&1 || true
-    fi
+    # Use retry logic to handle lock conflicts with other Claude Code sessions
+    run_claude_with_retry "$finalize_log" --model sonnet --permission-mode bypassPermissions -p "$FINALIZE_PROMPT"
 
     # Reset terminal after Claude (disable focus reporting)
     reset_terminal
