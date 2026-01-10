@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- GitHub Action for automatic releases on merge to main
+  - Reads VERSION from atlas.sh
+  - Creates git tag if doesn't exist
+  - Creates GitHub Release with notes from CHANGELOG
+
 ---
 
 ## [1.1.0] - 2026-01-09
