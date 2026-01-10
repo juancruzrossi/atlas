@@ -234,11 +234,46 @@ After modifying `atlas.sh`:
 
 **IMPORTANT**: For every change made to this project:
 
-1. **CHANGELOG.md**: Add changes under `[Unreleased]` section
-   - Use categories: Added, Changed, Deprecated, Removed, Fixed, Security
-   - Follow [Keep a Changelog](https://keepachangelog.com/) format
+### 1. During development (every PR)
+Add ALL changes to `CHANGELOG.md` under the `[Unreleased]` section:
+```markdown
+## [Unreleased]
 
-2. **When releasing a new version**:
-   - Move `[Unreleased]` changes to a new version section with date
-   - Update `VERSION` in `atlas.sh` (line ~18)
-   - Update version badge/number in `README.md` if displayed
+### Added
+- New features
+
+### Changed
+- Modifications to existing features
+
+### Fixed
+- Bug fixes
+
+### Removed
+- Deleted code or features
+```
+
+Use categories: Added, Changed, Deprecated, Removed, Fixed, Security.
+Follow [Keep a Changelog](https://keepachangelog.com/) format.
+
+### 2. When releasing a version
+Follow **Semantic Versioning** (MAJOR.MINOR.PATCH):
+- **MAJOR** (1.0.0 → 2.0.0): Breaking changes
+- **MINOR** (1.0.0 → 1.1.0): New features (backwards compatible)
+- **PATCH** (1.0.0 → 1.0.1): Bug fixes only
+
+**Release checklist**:
+1. Move `[Unreleased]` section to new version with date
+   ```markdown
+   ## [1.2.0] - 2026-01-15
+   ```
+2. Update `VERSION` in `atlas.sh` (line ~18): `VERSION="1.2.0"`
+3. Update version badge in `README.md`: `v1.2.0`
+4. Create git tag: `git tag v1.2.0`
+5. Create PR with release changes
+6. After merge, push tag: `git push origin v1.2.0`
+
+**Important**: Version number must match across:
+- `atlas.sh` (VERSION variable)
+- `CHANGELOG.md` (release section)
+- `README.md` (display badge)
+- Git tags (v1.2.0)
