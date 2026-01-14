@@ -240,8 +240,3 @@ Each iteration starts with **fresh context**. State persists in files:
 
 See `references/CONTEXT_ENGINEERING.md` for details.
 
----
-
-## License
-
-MIT
