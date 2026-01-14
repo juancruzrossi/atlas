@@ -68,10 +68,10 @@ fi
 # Mensaje limpio y elegante
 MESSAGE="<b>Atlas</b> › <code>${PROJECT_NAME}</code>
 
-$PROGRESS  <b>${ITERATION}</b>/${MAX_ITERATIONS}  (${PERCENT}%)
+Iteración <b>${ITERATION}</b>/${MAX_ITERATIONS}  $PROGRESS
 
 $STATUS_EMOJI  <b>${TASK:-Sin tarea}</b>
-📋  Pendientes: <b>${PENDING:-?}</b>${FOOTER}
+📋  <b>${PENDING:-?}</b> tareas pendientes en PRD${FOOTER}
 
 <i>${TIMESTAMP}</i>"
 
