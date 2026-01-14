@@ -45,7 +45,7 @@ PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pendientes" | head -1)
 # Limpiar valores
 TASK=$(echo "$TASK_LINE" | sed 's/^Tarea: *//')
 STATUS=$(echo "$STATUS_LINE" | sed 's/^Estado: *//')
-PENDING=$(echo "$PENDING_LINE" | sed 's/^Pendientes en PRD: *//')
+PENDING=$(echo "$PENDING_LINE" | sed 's/^Pendientes en backlog: *//')
 
 # Determinar emoji de estado
 STATUS_EMOJI="⏳"
@@ -71,7 +71,7 @@ MESSAGE="<b>Atlas</b> › <code>${PROJECT_NAME}</code>
 Iteración <b>${ITERATION}</b>/${MAX_ITERATIONS}  $PROGRESS
 
 $STATUS_EMOJI  <b>${TASK:-Sin tarea}</b>
-📋  <b>${PENDING:-?}</b> tareas pendientes en PRD${FOOTER}
+📋  <b>${PENDING:-?}</b> tareas pendientes en backlog${FOOTER}
 
 <i>${TIMESTAMP}</i>"
 
