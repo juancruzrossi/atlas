@@ -1,0 +1,23 @@
+{
+  "projectName": "Project Name",
+  "version": "1.0.0",
+  "qualityGates": [
+    "Build must pass without errors",
+    "No TypeScript/linting errors"
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Example Story",
+      "description": "As a user, I want to do something so that I achieve a goal",
+      "acceptanceCriteria": [
+        "Criterion 1",
+        "Criterion 2"
+      ],
+      "priority": 1,
+      "passes": false,
+      "status": "pending",
+      "dependsOn": []
+    }
+  ]
+}
