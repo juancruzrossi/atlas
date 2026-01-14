@@ -1,12 +1,16 @@
-# Backlog
+# [PROJECT_NAME] Backlog
 
-> Tasks in markdown format. Use with `atlas --cb`
+## TODO
 
-## Tasks
+### HIGH-001: Example task - DELETE THIS
+- **Category:** feature
+- **Description:** Replace this with your first real task
+- **Steps:**
+  1. Step 1
+  2. Step 2
 
-- [ ] US-001: Example task - describe what needs to be done
-- [ ] US-002: Another task - add more details here
+## IN PROGRESS
 
-## Completed
+## DONE
 
-<!-- Completed tasks are moved here or marked with [x] -->
+## DELAYED

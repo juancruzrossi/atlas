@@ -14,7 +14,7 @@ Since context resets each iteration, persist state in files:
 
 | What | Where |
 |------|-------|
-| Task progress | `prd.json` (passes: true/false) |
+| Task progress | `backlog.md` (TODO/IN PROGRESS/DONE sections) |
 | Learnings | `progress.txt` |
 | Error patterns | `guardrails.md` |
 | Recent failures | `errors.log` |
@@ -30,12 +30,12 @@ Since context resets each iteration, persist state in files:
 │  2. Read progress.txt (codebase knowledge)      │
 │  3. Read errors.log (recent failures)           │
 │  4. Read CLAUDE.md (project rules)              │
-│  5. Read prd.json (find pending task)           │
+│  5. Read backlog.md (find first TODO task)      │
 ├─────────────────────────────────────────────────┤
 │  WORK ON ONE TASK                               │
 ├─────────────────────────────────────────────────┤
 │  END OF ITERATION                               │
-│  - Update prd.json (mark task done)             │
+│  - Update backlog.md (move task to DONE)        │
 │  - Update progress.txt (learnings)              │
 │  - Update guardrails.md (if error learned)      │
 │  - Print summary for next iteration             │

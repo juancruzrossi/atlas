@@ -15,20 +15,23 @@ ACTIVITY_LOG="$ATLAS_DIR/activity.log"
 ERRORS_LOG="$ATLAS_DIR/errors.log"
 PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
-PRD_FILE="$ATLAS_DIR/prd.json"
+BACKLOG_FILE="$ATLAS_DIR/backlog.md"
 
 case "${1:-}" in
     init)
         mkdir -p "$ATLAS_DIR" "$RUNS_DIR"
-        [[ ! -f "$PRD_FILE" ]] && cp "$ATLAS_HOME/templates/prd.json" "$PRD_FILE" && echo "  Created: prd.json"
+        if [[ ! -f "$BACKLOG_FILE" ]]; then
+            sed "s/\[PROJECT_NAME\]/$PROJECT_NAME/" "$ATLAS_HOME/templates/backlog.md" > "$BACKLOG_FILE"
+            echo "  Created: backlog.md"
+        fi
         if [[ ! -f "$PROGRESS_FILE" ]]; then
             cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE"
             sed -i "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE" 2>/dev/null || sed -i '' "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE"
             echo "  Created: progress.txt"
         fi
         [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Created: guardrails.md"
-        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; echo "## Run Summary"; echo ""; echo "## Events"; echo ""; } > "$ACTIVITY_LOG" && echo "  Created: activity.log"
-        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; echo "> Failures and issues. Use this to add guardrails."; echo ""; } > "$ERRORS_LOG" && echo "  Created: errors.log"
+        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Created: activity.log"
+        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Created: errors.log"
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
         exit 0
@@ -38,16 +41,15 @@ case "${1:-}" in
         echo "Updating .atlas/"
         mkdir -p "$RUNS_DIR"
         UPDATED=0
-        for template in "$ATLAS_HOME/templates/"*; do
-            filename=$(basename "$template")
-            if [[ ! -f "$ATLAS_DIR/$filename" ]]; then
-                cp "$template" "$ATLAS_DIR/"
-                echo "  Added: $filename"
-                UPDATED=1
-            fi
-        done
-        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; echo "## Run Summary"; echo ""; echo "## Events"; echo ""; } > "$ACTIVITY_LOG" && echo "  Added: activity.log" && UPDATED=1
-        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; echo "> Failures and issues."; echo ""; } > "$ERRORS_LOG" && echo "  Added: errors.log" && UPDATED=1
+        if [[ ! -f "$BACKLOG_FILE" ]]; then
+            sed "s/\[PROJECT_NAME\]/$PROJECT_NAME/" "$ATLAS_HOME/templates/backlog.md" > "$BACKLOG_FILE"
+            echo "  Added: backlog.md"
+            UPDATED=1
+        fi
+        [[ ! -f "$PROGRESS_FILE" ]] && cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE" && echo "  Added: progress.txt" && UPDATED=1
+        [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Added: guardrails.md" && UPDATED=1
+        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Added: activity.log" && UPDATED=1
+        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Added: errors.log" && UPDATED=1
         if [[ -d "$ATLAS_HOME/references" ]]; then
             mkdir -p "$ATLAS_DIR/references"
             for ref in "$ATLAS_HOME/references/"*; do
@@ -60,13 +62,12 @@ case "${1:-}" in
         exit 0
         ;;
     help|--help|-h)
-        echo "Atlas - Simple autonomous coding agent loop"
+        echo "Atlas - Autonomous coding agent loop"
         echo ""
-        echo "Usage: atlas [iterations] [--cb]"
+        echo "Usage: atlas [iterations]"
         echo "       atlas init    - Initialize .atlas/ in current project"
         echo "       atlas update  - Add new files (preserves existing)"
         echo "       atlas 25      - Run 25 iterations"
-        echo "       atlas --cb 20 - Run 20 iterations with backlog.md"
         echo ""
         echo "Environment:"
         echo "  ATLAS_STALE_SECONDS=3600    Reset stuck stories"
@@ -77,37 +78,23 @@ esac
 
 MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
 STALE_SECONDS="${ATLAS_STALE_SECONDS:-$DEFAULT_STALE_SECONDS}"
-TASK_MODE="prd"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --cb) TASK_MODE="backlog"; shift ;;
         *) [[ "$1" =~ ^[0-9]+$ ]] && MAX_ITERATIONS="$1"; shift ;;
     esac
 done
 
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+[[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
 mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
-log_error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ERRORS_LOG"; }
 
 git_head() { git rev-parse --short HEAD 2>/dev/null || echo ""; }
 
 send_notification() {
     [[ "$NOTIFY_TELEGRAM" == "true" ]] && [[ -x "$ATLAS_HOME/notify-telegram.sh" ]] && "$ATLAS_HOME/notify-telegram.sh" "$1" "$MAX_ITERATIONS" "$PROJECT_NAME" "$2" &
-}
-
-get_quality_gates() {
-    [[ ! -f "$PRD_FILE" ]] && return
-    python3 - "$PRD_FILE" <<'PY' 2>/dev/null || true
-import json, sys
-from pathlib import Path
-try:
-    data = json.loads(Path(sys.argv[1]).read_text())
-    for g in data.get("qualityGates", []): print(f"- {g}")
-except: pass
-PY
 }
 
 RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
@@ -116,13 +103,12 @@ echo "╔═══════════════════════�
 echo "║  Atlas - Autonomous Coding Agent                      ║"
 echo "╠═══════════════════════════════════════════════════════╣"
 echo "║  Project: $PROJECT_NAME"
-echo "║  Mode: $TASK_MODE | Iterations: $MAX_ITERATIONS"
+echo "║  Iterations: $MAX_ITERATIONS"
 echo "║  Run: $RUN_TAG"
 echo "╚═══════════════════════════════════════════════════════╝"
 echo ""
 
-log_activity "RUN START run=$RUN_TAG mode=$TASK_MODE iterations=$MAX_ITERATIONS"
-QUALITY_GATES=$(get_quality_gates)
+log_activity "RUN START run=$RUN_TAG iterations=$MAX_ITERATIONS"
 
 for i in $(seq 1 $MAX_ITERATIONS); do
     echo "═══ ITERATION $i/$MAX_ITERATIONS ═══"
@@ -133,12 +119,10 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
     log_activity "ITERATION $i START"
 
-    PROMPT="TASK_MODE=$TASK_MODE
-PROJECT_DIR=$PROJECT_DIR
+    PROMPT="PROJECT_DIR=$PROJECT_DIR
+PROJECT_NAME=$PROJECT_NAME
 RUN_ID=$RUN_TAG
 ITERATION=$i
-QUALITY_GATES:
-$QUALITY_GATES
 
 $(cat "$ATLAS_HOME/prompt.md")"
 
