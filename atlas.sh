@@ -147,7 +147,7 @@ $(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found")
         exit 0
         ;;
     help|--help|-h)
-        echo "Atlas - Autonomous coding agent loop"
+        echo "Atlas - Autonomous Task Loop Agent System"
         echo ""
         echo "Usage: atlas [iterations]"
         echo "       atlas init         - Initialize .atlas/ in current project"
@@ -230,7 +230,7 @@ send_notification() {
 RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
 
 echo "╔═══════════════════════════════════════════════════════╗"
-echo "║  Atlas - Autonomous Coding Agent                      ║"
+echo "║  Atlas - Autonomous Task Loop Agent System            ║"
 echo "╠═══════════════════════════════════════════════════════╣"
 echo "║  Project: $PROJECT_NAME"
 echo "║  Iterations: $MAX_ITERATIONS"
