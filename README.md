@@ -1,6 +1,25 @@
-# Atlas
+<p align="center">
+  <h1 align="center">ATLAS</h1>
+  <p align="center"><strong>Autonomous Task Loop Agent System</strong></p>
+  <p align="center">
+    <em>Let Claude Code work through your backlog while you focus on what matters</em>
+  </p>
+</p>
 
-Autonomous coding agent that processes tasks from a backlog using Claude Code.
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#commands">Commands</a> •
+  <a href="#how-it-works">How It Works</a>
+</p>
+
+---
+
+## What is Atlas?
+
+Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You define what needs to be done, Atlas handles everything else—branches, code, quality checks, PRs, and merges.
+
+---
 
 ## Installation
 
@@ -8,7 +27,12 @@ Autonomous coding agent that processes tasks from a backlog using Claude Code.
 curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh | bash
 ```
 
-**Requirements:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Git, Bash
+### Requirements
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+- Git
+
+---
 
 ## Quick Start
 
@@ -19,6 +43,8 @@ atlas init          # Creates .atlas/ directory
 atlas 10            # Run 10 iterations
 ```
 
+---
+
 ## Commands
 
 | Command | Description |
@@ -27,6 +53,8 @@ atlas 10            # Run 10 iterations
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas [N]` | Run N iterations (default: 10) |
 | `atlas help` | Show help |
+
+---
 
 ## Configuration
 
@@ -40,6 +68,8 @@ export ATLAS_NOTIFY_TELEGRAM=true   # Enable Telegram notifications
 export ATLAS_TELEGRAM_BOT="token"   # Telegram bot token
 export ATLAS_TELEGRAM_CHAT="id"     # Telegram chat ID
 ```
+
+---
 
 ## How It Works
 
@@ -62,6 +92,8 @@ for each iteration:
 - Commits state changes immediately (crash recovery)
 - Stale tasks auto-reset to TODO after timeout
 
+---
+
 ## Backlog Format
 
 ```markdown
@@ -82,6 +114,8 @@ for each iteration:
 - **Reason:** Why it's blocked
 ```
 
+---
+
 ## Project Structure
 
 After `atlas init`:
@@ -97,6 +131,8 @@ your-project/
     ├── activity.log       # Run history
     └── runs/              # Iteration logs
 ```
+
+---
 
 ## Quality Gates
 
