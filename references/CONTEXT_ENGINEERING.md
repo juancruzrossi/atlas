@@ -19,6 +19,7 @@ Since context resets each iteration, persist state in files:
 | Error patterns | `guardrails.md` |
 | Recent failures | `errors.log` |
 | Run history | `activity.log` |
+| Feature specs | `specs/` (from `atlas plan`, for integral view) |
 
 ## The Atlas Context Flow
 
@@ -31,6 +32,8 @@ Since context resets each iteration, persist state in files:
 │  3. Read errors.log (recent failures)           │
 │  4. Read CLAUDE.md (project rules)              │
 │  5. Read backlog.md (find first TODO task)      │
+│  6. IF task has **Spec:** → load spec file      │
+│     (integral view: full feature context)       │
 ├─────────────────────────────────────────────────┤
 │  WORK ON ONE TASK                               │
 ├─────────────────────────────────────────────────┤
@@ -41,6 +44,14 @@ Since context resets each iteration, persist state in files:
 │  - Print summary for next iteration             │
 └─────────────────────────────────────────────────┘
 ```
+
+## Integral View (from `atlas plan`)
+
+When tasks are created via `atlas plan`, they include a `**Spec:**` field pointing to a detailed feature specification. Each iteration automatically loads this spec, giving the agent:
+
+1. **Full feature context** - understands the whole, implements one part
+2. **Consistent decisions** - all tasks share the same requirements
+3. **No drift** - spec is source of truth across iterations
 
 ## Key Principles
 
