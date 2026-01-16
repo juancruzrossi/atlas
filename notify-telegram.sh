@@ -35,47 +35,47 @@ progress_bar() {
 PROGRESS=$(progress_bar "$ITERATION" "$MAX_ITERATIONS")
 TIMESTAMP=$(date "+%H:%M")
 
-# Extraer campos del resumen
-TASK_LINE=$(echo "$SUMMARY" | grep -E "^Tarea:" | head -1)
-STATUS_LINE=$(echo "$SUMMARY" | grep -E "^Estado:" | head -1)
-PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pendientes" | head -1)
+# Extract fields from summary
+TASK_LINE=$(echo "$SUMMARY" | grep -E "^Task:" | head -1)
+STATUS_LINE=$(echo "$SUMMARY" | grep -E "^Status:" | head -1)
+PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pending:" | head -1)
 
-# Limpiar valores
-TASK=$(echo "$TASK_LINE" | sed 's/^Tarea: *//')
-STATUS=$(echo "$STATUS_LINE" | sed 's/^Estado: *//')
-PENDING=$(echo "$PENDING_LINE" | sed 's/^Pendientes: *//')
+# Clean values
+TASK=$(echo "$TASK_LINE" | sed 's/^Task: *//')
+STATUS=$(echo "$STATUS_LINE" | sed 's/^Status: *//')
+PENDING=$(echo "$PENDING_LINE" | sed 's/^Pending: *//')
 
-# Determinar emoji de estado
+# Determine status emoji
 STATUS_EMOJI="⏳"
-if [[ "$STATUS" == "HECHO" ]] || [[ "$STATUS" == "DONE" ]]; then
+if [[ "$STATUS" == "DONE" ]]; then
     STATUS_EMOJI="✅"
-elif [[ "$STATUS" == "FALLÓ" ]] || [[ "$STATUS" == "FAILED" ]]; then
+elif [[ "$STATUS" == "FAILED" ]]; then
     STATUS_EMOJI="❌"
-elif [[ "$STATUS" == "NINGUNA" ]] || [[ "$STATUS" == "NONE" ]]; then
+elif [[ "$STATUS" == "SKIPPED" ]]; then
     STATUS_EMOJI="⏸️"
 fi
 
-# Determinar si es la última iteración o si terminó todo
+# Determine footer
 FOOTER=""
 if [[ "$PENDING" == "0" ]]; then
     FOOTER="
-🎉 <b>¡Todas las tareas completadas!</b>"
+🎉 <b>All tasks completed!</b>"
 elif [[ "$ITERATION" == "$MAX_ITERATIONS" ]]; then
     FOOTER="
-⚠️ <i>Máximo de iteraciones alcanzado</i>"
+⚠️ <i>Max iterations reached</i>"
 fi
 
-# Mensaje limpio y elegante
+# Build message
 MESSAGE="<b>Atlas</b> › <code>${PROJECT_NAME}</code>
 
-Iteración <b>${ITERATION}</b>/${MAX_ITERATIONS}  $PROGRESS
+Iteration <b>${ITERATION}</b>/${MAX_ITERATIONS}  $PROGRESS
 
-$STATUS_EMOJI  <b>${TASK:-Sin tarea}</b>
-📋  <b>${PENDING:-?}</b> tareas pendientes en backlog${FOOTER}
+$STATUS_EMOJI  <b>${TASK:-No task}</b>
+📋  <b>${PENDING:-?}</b> pending in backlog${FOOTER}
 
 <i>${TIMESTAMP}</i>"
 
-# Enviar a Telegram
+# Send to Telegram
 curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
     -d "chat_id=${CHAT_ID}" \
     -d "parse_mode=HTML" \
