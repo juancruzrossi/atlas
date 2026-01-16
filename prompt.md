@@ -11,6 +11,8 @@ Review the context files included below BEFORE starting any task:
 - **progress.txt** - History and patterns from previous tasks
 - **errors.log** - Recent failures to avoid
 - **backlog.md** - Task list (TODO/IN_PROGRESS/DONE/DELAYED)
+- **Feature Spec** - If task has `**Spec:**` field, the full spec is loaded below.
+  This gives you INTEGRAL VIEW: implement ONE task but understand the WHOLE feature.
 
 ## Algorithm
 

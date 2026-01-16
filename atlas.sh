@@ -57,6 +57,10 @@ case "${1:-}" in
             chmod +x "$ATLAS_HOME/notify-telegram.sh" && \
             echo "  ✓ notify-telegram.sh updated"
 
+        echo "  Downloading latest PLAN_PROMPT.md..."
+        curl -fsSL "$REPO_URL/PLAN_PROMPT.md" -o "$ATLAS_HOME/PLAN_PROMPT.md" && \
+            echo "  ✓ PLAN_PROMPT.md updated"
+
         # Update templates (these are source templates, not user data)
         mkdir -p "$ATLAS_HOME/templates"
         for tpl in backlog.md progress.txt guardrails.md; do
@@ -79,13 +83,69 @@ case "${1:-}" in
         echo "  - errors.log, activity.log (your logs)"
         exit 0
         ;;
+    plan)
+        shift
+        FEATURE_PROMPT="${1:-}"
+
+        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan \"feature description\""; exit 1; }
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+
+        mkdir -p "$ATLAS_DIR/specs"
+        SPEC_FILE="$ATLAS_DIR/specs/spec-$(date +%Y%m%d-%H%M%S).md"
+
+        PLAN_PROMPT="FEATURE_REQUEST=$FEATURE_PROMPT
+PROJECT_DIR=$PROJECT_DIR
+PROJECT_NAME=$PROJECT_NAME
+SPEC_FILE=$SPEC_FILE
+
+$(cat "$ATLAS_HOME/PLAN_PROMPT.md")
+
+---
+# CONTEXT FILES
+## .atlas/backlog.md
+\`\`\`markdown
+$(cat "$BACKLOG_FILE")
+\`\`\`
+
+## .atlas/guardrails.md
+\`\`\`markdown
+$(cat "$GUARDRAILS_FILE" 2>/dev/null || echo "# No guardrails yet")
+\`\`\`
+
+## .atlas/progress.txt
+\`\`\`
+$(cat "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
+\`\`\`
+
+## CLAUDE.md
+\`\`\`markdown
+$(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found")
+\`\`\`"
+
+        echo "╔═══════════════════════════════════════════════════════╗"
+        echo "║  Atlas Plan - Feature Interview                       ║"
+        echo "╠═══════════════════════════════════════════════════════╣"
+        echo "║  Feature: $FEATURE_PROMPT"
+        echo "║  Output:  $SPEC_FILE"
+        echo "╚═══════════════════════════════════════════════════════╝"
+
+        log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
+        log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
+
+        # NO --dangerously-skip-permissions (allows AskUserQuestion)
+        # NO timeout (interview is interactive)
+        echo "$PLAN_PROMPT" | claude -p
+
+        exit 0
+        ;;
     help|--help|-h)
         echo "Atlas - Autonomous coding agent loop"
         echo ""
         echo "Usage: atlas [iterations]"
-        echo "       atlas init    - Initialize .atlas/ in current project"
-        echo "       atlas update  - Update Atlas from GitHub (preserves your data)"
-        echo "       atlas 25      - Run 25 iterations"
+        echo "       atlas init         - Initialize .atlas/ in current project"
+        echo "       atlas plan \"...\"   - Interview and plan a feature"
+        echo "       atlas update       - Update Atlas from GitHub (preserves your data)"
+        echo "       atlas 25           - Run 25 iterations"
         echo ""
         echo "Environment variables (all configurable):"
         echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
@@ -219,6 +279,18 @@ $(cat "$ERRORS_LOG" 2>/dev/null || echo "# No errors yet")
 \`\`\`markdown
 $(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found - use standard practices")
 \`\`\`"
+
+    # Extract spec file from current task in backlog (if exists)
+    CURRENT_TASK_SPEC=$(grep -A15 "^### " "$BACKLOG_FILE" | grep -m1 "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
+    if [[ -n "$CURRENT_TASK_SPEC" && -f "$CURRENT_TASK_SPEC" ]]; then
+        PROMPT="$PROMPT
+
+## Feature Spec (INTEGRAL VIEW - read for full context)
+\`\`\`markdown
+$(cat "$CURRENT_TASK_SPEC")
+\`\`\`"
+        echo "  📋 Loaded spec: $CURRENT_TASK_SPEC"
+    fi
 
     set +e
     OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
