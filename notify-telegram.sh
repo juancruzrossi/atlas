@@ -1,16 +1,16 @@
 #!/bin/bash
 # Atlas -> Telegram Notification Script
 #
-# Configurar via variables de entorno:
-#   ATLAS_TELEGRAM_BOT  - Token del bot de Telegram
-#   ATLAS_TELEGRAM_CHAT - ID del chat/grupo
+# Configure via environment variables:
+#   ATLAS_TELEGRAM_BOT  - Telegram bot token
+#   ATLAS_TELEGRAM_CHAT - Chat/group ID
 #
-# Para desactivar: export ATLAS_NOTIFY_TELEGRAM=false
+# To disable: export ATLAS_NOTIFY_TELEGRAM=false
 
 BOT_TOKEN="${ATLAS_TELEGRAM_BOT:-}"
 CHAT_ID="${ATLAS_TELEGRAM_CHAT:-}"
 
-# Salir silenciosamente si no está configurado
+# Exit silently if not configured
 if [[ -z "$BOT_TOKEN" ]] || [[ -z "$CHAT_ID" ]]; then
     exit 0
 fi
@@ -20,7 +20,7 @@ MAX_ITERATIONS="$2"
 PROJECT_NAME="$3"
 SUMMARY="$4"
 
-# Barra de progreso más elegante
+# Progress bar
 progress_bar() {
     local current=$1
     local max=$2
