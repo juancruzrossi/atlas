@@ -53,6 +53,8 @@ if [[ "$STATUS" == "HECHO" ]] || [[ "$STATUS" == "DONE" ]]; then
     STATUS_EMOJI="✅"
 elif [[ "$STATUS" == "FALLÓ" ]] || [[ "$STATUS" == "FAILED" ]]; then
     STATUS_EMOJI="❌"
+elif [[ "$STATUS" == "NINGUNA" ]] || [[ "$STATUS" == "NONE" ]]; then
+    STATUS_EMOJI="⏸️"
 fi
 
 # Determinar si es la última iteración o si terminó todo

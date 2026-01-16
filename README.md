@@ -132,16 +132,23 @@ ATLAS_STALE_SECONDS=0 atlas 10     # Disable stale detection
 
 ```
 for each iteration:
-    1. Read backlog.md, find first TODO task
-    2. Move task to IN PROGRESS
-    3. Implement completely
-    4. Verify quality gates pass (from CLAUDE.md)
-    5. Create PR and merge
-    6. Move task to DONE
-    7. If no TODO tasks → exit
+    1. Check IN_PROGRESS first (resume interrupted task)
+    2. If none, pick first TODO task
+    3. Create branch: atlas/[TASK_ID]
+    4. Move to IN_PROGRESS + commit
+    5. Implement completely
+    6. Run quality gates (from CLAUDE.md)
+    7. Create PR → merge (squash) → return to main
+    8. Move to DONE + commit
+    9. If error → move to DELAYED + commit
+   10. If no tasks left → exit loop
 ```
 
-Each iteration is **stateless**. The agent reads state from files at the start and writes state to files at the end.
+**Key features:**
+- Context files are pre-loaded (no tool calls to read them)
+- Commits backlog.md changes immediately (crash recovery)
+- Handles errors by moving tasks to DELAYED
+- Stale tasks in IN_PROGRESS auto-reset to TODO
 
 ---
 
@@ -175,7 +182,7 @@ Define quality gates in your project's `CLAUDE.md`:
 - No TypeScript errors
 ```
 
-Atlas reads CLAUDE.md at the start of each iteration.
+Atlas pre-loads CLAUDE.md content into each iteration's context.
 
 ---
 
