@@ -17,7 +17,7 @@
 
 ## What is Atlas?
 
-Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You define what needs to be done, Atlas handles everything else—branches, code, quality checks, PRs, and merges.
+Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You define what needs to be done, Atlas handles everything else: branches, code, quality checks, PRs, and merges.
 
 ---
 
@@ -42,7 +42,7 @@ atlas init
 
 # Edit .atlas/backlog.md with your tasks
 
-atlas 10
+atlas
 ```
 
 ---
@@ -53,7 +53,7 @@ atlas 10
 |---------|-------------|
 | `atlas init` | Initialize `.atlas/` in current project |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
-| `atlas [N]` | Run N iterations (default: 10) |
+| `atlas [N]` | Run N iterations (default: 25) |
 | `atlas help` | Show help |
 
 ---
@@ -63,7 +63,7 @@ atlas 10
 Override defaults with `ATLAS_` environment variables:
 
 ```bash
-export ATLAS_MAX_ITERATIONS=10      # Max iterations per run
+export ATLAS_MAX_ITERATIONS=25      # Max iterations per run
 export ATLAS_TIMEOUT=1200           # Timeout per iteration (seconds)
 export ATLAS_STALE_SECONDS=7200     # Reset stuck tasks (seconds, 0 to disable)
 export ATLAS_NOTIFY_TELEGRAM=true   # Enable Telegram notifications

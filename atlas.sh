@@ -6,7 +6,7 @@ PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
-DEFAULT_MAX_ITERATIONS=10
+DEFAULT_MAX_ITERATIONS=25
 DEFAULT_STALE_SECONDS=7200
 DEFAULT_TIMEOUT=1200
 
@@ -88,7 +88,7 @@ case "${1:-}" in
         echo "       atlas 25      - Run 25 iterations"
         echo ""
         echo "Environment variables (all configurable):"
-        echo "  ATLAS_MAX_ITERATIONS=10     Max iterations per run"
+        echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
         echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
         echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
         echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram notifications"
