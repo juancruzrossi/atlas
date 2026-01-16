@@ -38,28 +38,45 @@ case "${1:-}" in
         exit 0
         ;;
     update)
-        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
-        echo "Updating .atlas/"
-        mkdir -p "$RUNS_DIR"
-        UPDATED=0
-        if [[ ! -f "$BACKLOG_FILE" ]]; then
-            sed "s/\[PROJECT_NAME\]/$PROJECT_NAME/" "$ATLAS_HOME/templates/backlog.md" > "$BACKLOG_FILE"
-            echo "  Added: backlog.md"
-            UPDATED=1
-        fi
-        [[ ! -f "$PROGRESS_FILE" ]] && cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE" && echo "  Added: progress.txt" && UPDATED=1
-        [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Added: guardrails.md" && UPDATED=1
-        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Added: activity.log" && UPDATED=1
-        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Added: errors.log" && UPDATED=1
-        if [[ -d "$ATLAS_HOME/references" ]]; then
-            mkdir -p "$ATLAS_DIR/references"
-            for ref in "$ATLAS_HOME/references/"*; do
-                refname=$(basename "$ref")
-                [[ ! -f "$ATLAS_DIR/references/$refname" ]] && cp "$ref" "$ATLAS_DIR/references/" && echo "  Added: references/$refname" && UPDATED=1
-            done
-        fi
-        [[ $UPDATED -eq 0 ]] && echo "  Everything up to date"
-        echo "✓ Update complete"
+        echo "Updating Atlas from GitHub..."
+        REPO_URL="https://raw.githubusercontent.com/juancruzrossi/atlas/main"
+
+        # Update core Atlas files
+        echo "  Downloading latest atlas.sh..."
+        curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh.new" && \
+            mv "$ATLAS_HOME/atlas.sh.new" "$ATLAS_HOME/atlas.sh" && \
+            chmod +x "$ATLAS_HOME/atlas.sh" && \
+            echo "  ✓ atlas.sh updated"
+
+        echo "  Downloading latest prompt.md..."
+        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" && \
+            echo "  ✓ prompt.md updated"
+
+        echo "  Downloading latest notify-telegram.sh..."
+        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && \
+            chmod +x "$ATLAS_HOME/notify-telegram.sh" && \
+            echo "  ✓ notify-telegram.sh updated"
+
+        # Update templates (these are source templates, not user data)
+        mkdir -p "$ATLAS_HOME/templates"
+        for tpl in backlog.md progress.txt guardrails.md; do
+            curl -fsSL "$REPO_URL/templates/$tpl" -o "$ATLAS_HOME/templates/$tpl" 2>/dev/null && \
+                echo "  ✓ templates/$tpl updated"
+        done
+
+        # Update references
+        mkdir -p "$ATLAS_HOME/references"
+        for ref in GUARDRAILS.md CONTEXT_ENGINEERING.md; do
+            curl -fsSL "$REPO_URL/references/$ref" -o "$ATLAS_HOME/references/$ref" 2>/dev/null && \
+                echo "  ✓ references/$ref updated"
+        done
+
+        echo ""
+        echo "✓ Atlas updated to latest version"
+        echo ""
+        echo "Note: Your project files in .atlas/ are preserved:"
+        echo "  - backlog.md, progress.txt, guardrails.md (your data)"
+        echo "  - errors.log, activity.log (your logs)"
         exit 0
         ;;
     help|--help|-h)
@@ -67,7 +84,7 @@ case "${1:-}" in
         echo ""
         echo "Usage: atlas [iterations]"
         echo "       atlas init    - Initialize .atlas/ in current project"
-        echo "       atlas update  - Add new files (preserves existing)"
+        echo "       atlas update  - Update Atlas from GitHub (preserves your data)"
         echo "       atlas 25      - Run 25 iterations"
         echo ""
         echo "Environment variables (all configurable):"

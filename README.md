@@ -24,7 +24,7 @@ atlas 10            # Run 10 iterations
 | Command | Description |
 |---------|-------------|
 | `atlas init` | Initialize `.atlas/` in current project |
-| `atlas update` | Add new template files (preserves existing) |
+| `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas [N]` | Run N iterations (default: 10) |
 | `atlas help` | Show help |
 
