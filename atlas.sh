@@ -140,9 +140,9 @@ $(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found")
         log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
         log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
 
-        # Interactive mode: no -p flag, no --dangerously-skip-permissions
-        # This allows AskUserQuestionTool to work
-        claude "$PLAN_PROMPT"
+        # Interactive mode (no -p) allows AskUserQuestionTool
+        # --dangerously-skip-permissions avoids permission prompts
+        claude --dangerously-skip-permissions "$PLAN_PROMPT"
 
         exit 0
         ;;
