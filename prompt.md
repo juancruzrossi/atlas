@@ -30,8 +30,8 @@ Context files are included below. Do NOT read them again.
 
 7. Finalize:
    - Move task to DONE with date and PR number
-   - git add .atlas/backlog.md && git commit -m "chore: complete [TASK_ID]"
-   - Add learnings to progress.txt (optional)
+   - Append to progress.txt (see format below)
+   - git add .atlas/ && git commit -m "chore: complete [TASK_ID]"
 
 8. Print summary (MANDATORY - see format below)
 ```
@@ -39,11 +39,34 @@ Context files are included below. Do NOT read them again.
 ## Error Handling
 
 If build/test fails or task is blocked:
-1. Move task to DELAYED with reason
-2. Add error to errors.log: `[DATE] [TASK_ID]: [error]`
-3. Add Sign to guardrails.md if you learned something
-4. Commit changes, return to main branch
-5. Go to step 8
+1. Move task to DELAYED with reason in backlog.md
+2. Append to errors.log (see format below)
+3. Add Sign to guardrails.md if you learned something preventable
+4. git add .atlas/ && git commit -m "chore: delay [TASK_ID]"
+5. Return to main branch, go to step 8
+
+## File Formats
+
+**progress.txt** (append after each completed task):
+```
+## [DATE] - [TASK_ID]: [Title]
+Summary: [1-2 sentences of what was done]
+PR: #[number]
+Notes: [any gotchas for future iterations]
+```
+
+**errors.log** (append on failure):
+```
+[DATE] [TASK_ID]: [brief error description]
+```
+
+**guardrails.md** (add Sign if learned something):
+```
+### Sign: [Name]
+- **Trigger**: [when to apply]
+- **Instruction**: [what to do/avoid]
+- **Learned from**: [TASK_ID]
+```
 
 ## Summary Format (MANDATORY)
 
