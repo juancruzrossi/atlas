@@ -45,7 +45,7 @@ PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pendientes" | head -1)
 # Limpiar valores
 TASK=$(echo "$TASK_LINE" | sed 's/^Tarea: *//')
 STATUS=$(echo "$STATUS_LINE" | sed 's/^Estado: *//')
-PENDING=$(echo "$PENDING_LINE" | sed 's/^Pendientes en backlog: *//')
+PENDING=$(echo "$PENDING_LINE" | sed 's/^Pendientes: *//')
 
 # Determinar emoji de estado
 STATUS_EMOJI="⏳"
