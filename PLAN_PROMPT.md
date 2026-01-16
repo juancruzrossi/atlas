@@ -14,6 +14,14 @@ Do NOT ask questions as plain text - use the tool so the user can select options
 - `$PROJECT_DIR` - Project directory
 - `$PROJECT_NAME` - Project name
 - `$SPEC_FILE` - Where to write the final spec
+- `$BACKLOG_FILE` - Path to backlog.md
+
+## Context Files (read these first)
+
+Before starting, read these files for context:
+- `CLAUDE.md` - Project rules and patterns
+- `.atlas/backlog.md` - Existing tasks (to auto-increment IDs)
+- `.atlas/guardrails.md` - Rules from past errors
 
 ---
 

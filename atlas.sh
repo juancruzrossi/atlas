@@ -105,30 +105,9 @@ case "${1:-}" in
 PROJECT_DIR=$PROJECT_DIR
 PROJECT_NAME=$PROJECT_NAME
 SPEC_FILE=$SPEC_FILE
+BACKLOG_FILE=$BACKLOG_FILE
 
-$(cat "$ATLAS_HOME/PLAN_PROMPT.md")
-
----
-# CONTEXT FILES
-## .atlas/backlog.md
-\`\`\`markdown
-$(cat "$BACKLOG_FILE")
-\`\`\`
-
-## .atlas/guardrails.md
-\`\`\`markdown
-$(cat "$GUARDRAILS_FILE" 2>/dev/null || echo "# No guardrails yet")
-\`\`\`
-
-## .atlas/progress.txt
-\`\`\`
-$(cat "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
-\`\`\`
-
-## CLAUDE.md
-\`\`\`markdown
-$(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found")
-\`\`\`"
+$(cat "$ATLAS_HOME/PLAN_PROMPT.md")"
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Plan - Feature Interview                       ║"
