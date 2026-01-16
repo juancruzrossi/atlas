@@ -75,22 +75,16 @@ This is a pure bash project. No build step required.
 
 ## GitFlow & Releases
 
-For features, improvements, or fixes that require a branch:
+**Before merging any PR, ASK the user:**
+> "¿Nueva versión (ej: 1.5.0) o va a Unreleased?"
 
-1. **Use the gitflow-manager agent** to create branches and manage PRs
-2. **Update `CHANGELOG.md`** before merging:
-   - Add entry under `[Unreleased]` or create new version section
-   - Follow [Keep a Changelog](https://keepachangelog.com/) format
-   - Increment version per [SemVer](https://semver.org/): major.minor.patch
-3. **GitHub Action** creates releases automatically when new version detected in CHANGELOG
+Then:
+1. If **new version**: Create version section in CHANGELOG with date
+2. If **Unreleased**: Add to `[Unreleased]` section
 
-Example CHANGELOG entry:
-```markdown
-## [1.4.0] - 2026-01-16
+**SemVer rules:**
+- **patch** (1.4.1): bug fixes
+- **minor** (1.5.0): new features, backwards compatible
+- **major** (2.0.0): breaking changes
 
-### Added
-- New feature X
-
-### Fixed
-- Bug in Y
-```
+**GitHub Action** creates releases automatically when new version detected.
