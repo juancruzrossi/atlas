@@ -70,10 +70,13 @@ case "${1:-}" in
         echo "       atlas update  - Add new files (preserves existing)"
         echo "       atlas 25      - Run 25 iterations"
         echo ""
-        echo "Environment:"
-        echo "  ATLAS_TIMEOUT=1200          Iteration timeout in seconds (default: 1200 = 20min)"
-        echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (default: 7200 = 2h)"
+        echo "Environment variables (all configurable):"
+        echo "  ATLAS_MAX_ITERATIONS=10     Max iterations per run"
+        echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
+        echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
         echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram notifications"
+        echo "  ATLAS_TELEGRAM_BOT=...      Telegram bot token"
+        echo "  ATLAS_TELEGRAM_CHAT=...     Telegram chat ID"
         exit 0
         ;;
 esac
