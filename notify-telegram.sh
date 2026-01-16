@@ -32,8 +32,6 @@ progress_bar() {
     echo "$bar"
 }
 
-# Calcular porcentaje
-PERCENT=$((ITERATION * 100 / MAX_ITERATIONS))
 PROGRESS=$(progress_bar "$ITERATION" "$MAX_ITERATIONS")
 TIMESTAMP=$(date "+%H:%M")
 
