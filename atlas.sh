@@ -40,8 +40,8 @@ case "${1:-}" in
     update)
         REPO_URL="https://raw.githubusercontent.com/juancruzrossi/atlas/main"
 
-        # Get current version
-        OLD_VERSION=$(grep -m1 "^## \[" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
+        # Get current version (skip Unreleased, find first X.Y.Z)
+        OLD_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
 
         # Download all files silently
         mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references"
@@ -57,8 +57,8 @@ case "${1:-}" in
         ATLAS_BIN=$(which atlas 2>/dev/null)
         [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]] && cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"
 
-        # Get new version
-        NEW_VERSION=$(grep -m1 "^## \[" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
+        # Get new version (skip Unreleased, find first X.Y.Z)
+        NEW_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
 
         echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
         exit 0
