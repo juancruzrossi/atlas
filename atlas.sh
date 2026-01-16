@@ -188,14 +188,14 @@ $(cat "$BACKLOG_FILE")
 $(cat "$GUARDRAILS_FILE" 2>/dev/null || echo "# No guardrails yet")
 \`\`\`
 
-## .atlas/progress.txt (last 30 lines)
+## .atlas/progress.txt
 \`\`\`
-$(tail -30 "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
+$(cat "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
 \`\`\`
 
-## .atlas/errors.log (last 20 lines)
+## .atlas/errors.log
 \`\`\`
-$(tail -20 "$ERRORS_LOG" 2>/dev/null || echo "# No errors yet")
+$(cat "$ERRORS_LOG" 2>/dev/null || echo "# No errors yet")
 \`\`\`
 
 ## CLAUDE.md (project rules)
