@@ -60,7 +60,7 @@ atlas 10
 
 ## Configuration (optional)
 
-All settings have sensible defaults. Override with `ATLAS_` environment variables:
+Override defaults with `ATLAS_` environment variables:
 
 ```bash
 export ATLAS_MAX_ITERATIONS=10      # Max iterations per run
