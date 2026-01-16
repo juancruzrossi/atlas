@@ -7,7 +7,8 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 DEFAULT_MAX_ITERATIONS=10
-DEFAULT_STALE_SECONDS=0
+DEFAULT_STALE_SECONDS=7200
+DEFAULT_TIMEOUT=1200
 
 ATLAS_DIR=".atlas"
 RUNS_DIR="$ATLAS_DIR/runs"
@@ -70,14 +71,16 @@ case "${1:-}" in
         echo "       atlas 25      - Run 25 iterations"
         echo ""
         echo "Environment:"
-        echo "  ATLAS_STALE_SECONDS=3600    Reset stuck stories"
-        echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram"
+        echo "  ATLAS_TIMEOUT=1200          Iteration timeout in seconds (default: 1200 = 20min)"
+        echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (default: 7200 = 2h)"
+        echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram notifications"
         exit 0
         ;;
 esac
 
 MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
 STALE_SECONDS="${ATLAS_STALE_SECONDS:-$DEFAULT_STALE_SECONDS}"
+TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -90,6 +93,45 @@ done
 mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
+
+# Check for stale tasks in IN PROGRESS and move back to TODO
+reset_stale_tasks() {
+    [[ "$STALE_SECONDS" -eq 0 ]] && return
+
+    # Check if there's a task in IN PROGRESS
+    local in_progress_task=$(sed -n '/^## IN PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
+    [[ -z "$in_progress_task" ]] && return
+
+    # Find most recent run log to determine age
+    local latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
+    [[ -z "$latest_run" ]] && return
+
+    local last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+    local now=$(date +%s)
+    local age=$((now - last_mod))
+
+    [[ "$age" -le "$STALE_SECONDS" ]] && return
+
+    echo "⚠️  Stale task in IN PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
+    echo "   Resetting to TODO..."
+
+    # Extract full task block from IN PROGRESS
+    local task_block=$(sed -n '/^## IN PROGRESS$/,/^## DONE$/{/^## /d;p;}' "$BACKLOG_FILE")
+    [[ -z "$task_block" ]] && return
+
+    # Create temp file with task moved back to TODO (insert before IN PROGRESS)
+    awk -v task="$task_block" '
+        /^## IN PROGRESS$/ { print task; print ""; print; in_progress=1; next }
+        /^## DONE$/ { in_progress=0 }
+        in_progress && /^### / { next }
+        in_progress && /^- \*\*/ { next }
+        in_progress && /^  [0-9]+\./ { next }
+        { print }
+    ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
+
+    log_activity "STALE RESET: Moved task back to TODO after ${age}s"
+    echo "✓ Task moved back to TODO"
+}
 
 git_head() { git rev-parse --short HEAD 2>/dev/null || echo ""; }
 
@@ -110,6 +152,8 @@ echo ""
 
 log_activity "RUN START run=$RUN_TAG iterations=$MAX_ITERATIONS"
 
+reset_stale_tasks
+
 for i in $(seq 1 $MAX_ITERATIONS); do
     echo "═══ ITERATION $i/$MAX_ITERATIONS ═══"
 
@@ -127,7 +171,7 @@ ITERATION=$i
 $(cat "$ATLAS_HOME/prompt.md")"
 
     set +e
-    OUTPUT=$(echo "$PROMPT" | claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
+    OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
     set -e
 
     ITER_END=$(date +%s)
