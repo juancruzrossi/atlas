@@ -1,0 +1,87 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates task processing using Claude Code. It reads tasks from a markdown backlog, creates branches, implements code, runs quality gates, creates PRs, merges them, and tracks progress—all autonomously in a loop.
+
+## Architecture
+
+```
+atlas.sh          Main entry point - orchestrates the iteration loop
+prompt.md         System prompt injected into each Claude Code invocation
+notify-telegram.sh  Telegram notifications for iteration progress
+install.sh        Installer script for global installation
+templates/        Initial templates copied on `atlas init`
+references/       Documentation about context engineering and guardrails
+```
+
+**Core loop** (`atlas.sh`):
+1. Builds prompt with all context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
+2. Invokes `claude --dangerously-skip-permissions -p` with the prompt
+3. Parses output for `<promise>COMPLETE</promise>` to exit early
+4. Logs iteration to `$RUNS_DIR` and optionally notifies Telegram
+
+**State files** (in `.atlas/` within target project):
+- `backlog.md` - Task queue (TODO/IN PROGRESS/DONE/DELAYED sections)
+- `guardrails.md` - Rules learned from past errors (Signs methodology)
+- `progress.txt` - Learnings and context from completed tasks
+- `errors.log` - Recent failure log
+- `activity.log` - Run history
+- `runs/` - Per-iteration logs
+
+## Commands
+
+```bash
+atlas init        # Initialize .atlas/ in current project
+atlas update      # Update Atlas from GitHub (preserves project data)
+atlas [N]         # Run N iterations (default: 25)
+atlas help        # Show help
+```
+
+## Development
+
+This is a pure bash project. No build step required.
+
+**Testing changes locally:**
+```bash
+# Run atlas from source (symlink already exists)
+./atlas.sh help
+./atlas.sh init
+./atlas.sh 1  # Run single iteration
+```
+
+**Key environment variables:**
+- `ATLAS_MAX_ITERATIONS` - Max iterations per run (default: 25)
+- `ATLAS_TIMEOUT` - Timeout per iteration in seconds (default: 1200)
+- `ATLAS_STALE_SECONDS` - Reset stuck tasks after N seconds (default: 7200)
+- `ATLAS_NOTIFY_TELEGRAM` - Enable Telegram notifications (default: true)
+
+## Conventions
+
+- Conventional Commits in English
+- Prompt changes: edit `prompt.md`, keep algorithm section in sync with `atlas.sh`
+- Template changes: edit files in `templates/`, they're copied on `atlas init`
+
+## GitFlow & Releases
+
+For features, improvements, or fixes that require a branch:
+
+1. **Use the gitflow-manager agent** to create branches and manage PRs
+2. **Update `CHANGELOG.md`** before merging:
+   - Add entry under `[Unreleased]` or create new version section
+   - Follow [Keep a Changelog](https://keepachangelog.com/) format
+   - Increment version per [SemVer](https://semver.org/): major.minor.patch
+3. **GitHub Action** creates releases automatically when new version detected in CHANGELOG
+
+Example CHANGELOG entry:
+```markdown
+## [1.4.0] - 2026-01-16
+
+### Added
+- New feature X
+
+### Fixed
+- Bug in Y
+```
