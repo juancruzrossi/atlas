@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-01-16
+
+### Changed
+- Prompt architecture: reference files instead of injecting content
+- Context files listed in CONTEXT_FILES_TO_READ variable for selective reading
+- Smaller initial prompt size, more scalable as files grow
+- Agent reads files on-demand using Read tool (parallel reads for efficiency)
+
+### Technical
+- atlas.sh builds dynamic file list based on which files exist
+- prompt.md updated with mandatory file reading instructions
+- Variables exposed: BACKLOG_FILE, GUARDRAILS_FILE, PROGRESS_FILE, ERRORS_LOG, SPEC_FILE
+
 ## [1.5.1] - 2026-01-16
 
 ### Fixed
