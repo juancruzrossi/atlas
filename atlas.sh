@@ -38,57 +38,29 @@ case "${1:-}" in
         exit 0
         ;;
     update)
-        echo "Updating Atlas from GitHub..."
         REPO_URL="https://raw.githubusercontent.com/juancruzrossi/atlas/main"
 
-        # Update core Atlas files
-        echo "  Downloading latest atlas.sh..."
-        curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh.new" && \
-            mv "$ATLAS_HOME/atlas.sh.new" "$ATLAS_HOME/atlas.sh" && \
-            chmod +x "$ATLAS_HOME/atlas.sh" && \
-            echo "  ✓ atlas.sh updated"
+        # Get current version
+        OLD_VERSION=$(grep -m1 "^## \[" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
 
-        # Update the binary in PATH (if it's a copy, not a symlink)
+        # Download all files silently
+        mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references"
+        curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
+        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
+        curl -fsSL "$REPO_URL/PLAN_PROMPT.md" -o "$ATLAS_HOME/PLAN_PROMPT.md"
+        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md"
+        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
+        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null; done
+        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null; done
+
+        # Update binary in PATH if needed
         ATLAS_BIN=$(which atlas 2>/dev/null)
-        if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then
-            cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && \
-                chmod +x "$ATLAS_BIN" && \
-                echo "  ✓ Binary updated: $ATLAS_BIN"
-        fi
+        [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]] && cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"
 
-        echo "  Downloading latest prompt.md..."
-        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" && \
-            echo "  ✓ prompt.md updated"
+        # Get new version
+        NEW_VERSION=$(grep -m1 "^## \[" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
 
-        echo "  Downloading latest notify-telegram.sh..."
-        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && \
-            chmod +x "$ATLAS_HOME/notify-telegram.sh" && \
-            echo "  ✓ notify-telegram.sh updated"
-
-        echo "  Downloading latest PLAN_PROMPT.md..."
-        curl -fsSL "$REPO_URL/PLAN_PROMPT.md" -o "$ATLAS_HOME/PLAN_PROMPT.md" && \
-            echo "  ✓ PLAN_PROMPT.md updated"
-
-        # Update templates (these are source templates, not user data)
-        mkdir -p "$ATLAS_HOME/templates"
-        for tpl in backlog.md progress.txt guardrails.md; do
-            curl -fsSL "$REPO_URL/templates/$tpl" -o "$ATLAS_HOME/templates/$tpl" 2>/dev/null && \
-                echo "  ✓ templates/$tpl updated"
-        done
-
-        # Update references
-        mkdir -p "$ATLAS_HOME/references"
-        for ref in GUARDRAILS.md CONTEXT_ENGINEERING.md; do
-            curl -fsSL "$REPO_URL/references/$ref" -o "$ATLAS_HOME/references/$ref" 2>/dev/null && \
-                echo "  ✓ references/$ref updated"
-        done
-
-        echo ""
-        echo "✓ Atlas updated to latest version"
-        echo ""
-        echo "Note: Your project files in .atlas/ are preserved:"
-        echo "  - backlog.md, progress.txt, guardrails.md (your data)"
-        echo "  - errors.log, activity.log (your logs)"
+        echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
         exit 0
         ;;
     plan)
