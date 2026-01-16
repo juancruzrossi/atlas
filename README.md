@@ -38,9 +38,11 @@ curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh
 
 ```bash
 cd your-project
-atlas init          # Creates .atlas/ directory
+atlas init
+
 # Edit .atlas/backlog.md with your tasks
-atlas 10            # Run 10 iterations
+
+atlas 10
 ```
 
 ---
@@ -56,9 +58,9 @@ atlas 10            # Run 10 iterations
 
 ---
 
-## Configuration
+## Configuration (optional)
 
-All settings use environment variables with `ATLAS_` prefix:
+All settings have sensible defaults. Override with `ATLAS_` environment variables:
 
 ```bash
 export ATLAS_MAX_ITERATIONS=10      # Max iterations per run
