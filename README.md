@@ -53,14 +53,21 @@ atlas [command] [options]
 
 ### Environment Variables
 
+All settings are configurable via environment variables with the `ATLAS_` prefix:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ATLAS_MAX_ITERATIONS` | Max iterations per run | 10 |
-| `ATLAS_TIMEOUT` | Timeout per iteration (seconds) | 1200 (20 min) |
-| `ATLAS_STALE_SECONDS` | Reset stuck tasks after N seconds | 7200 (2 hours) |
-| `ATLAS_NOTIFY_TELEGRAM` | Enable Telegram notifications | true |
+| `ATLAS_MAX_ITERATIONS` | Max iterations per run | `10` |
+| `ATLAS_TIMEOUT` | Timeout per iteration (seconds) | `1200` (20 min) |
+| `ATLAS_STALE_SECONDS` | Reset stuck tasks after N seconds | `7200` (2 hours) |
+| `ATLAS_NOTIFY_TELEGRAM` | Enable Telegram notifications | `true` |
 | `ATLAS_TELEGRAM_BOT` | Telegram bot token | - |
 | `ATLAS_TELEGRAM_CHAT` | Telegram chat ID | - |
+
+Example:
+```bash
+ATLAS_MAX_ITERATIONS=25 ATLAS_TIMEOUT=900 atlas
+```
 
 ### Timeout
 
