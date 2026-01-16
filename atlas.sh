@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ATLAS_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ATLAS_HOME="${HOME}/.atlas"
 PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
