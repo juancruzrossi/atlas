@@ -45,14 +45,14 @@ TASK=$(echo "$TASK_LINE" | sed 's/^Task: *//')
 STATUS=$(echo "$STATUS_LINE" | sed 's/^Status: *//')
 PENDING=$(echo "$PENDING_LINE" | sed 's/^Pending: *//')
 
-# Determine status emoji
+# Determine status emoji (pattern matching for statuses with extra info like "SKIPPED (reason)")
 STATUS_EMOJI="⏳"
-if [[ "$STATUS" == "DONE" ]]; then
+if [[ "$STATUS" == DONE* ]]; then
     STATUS_EMOJI="✅"
-elif [[ "$STATUS" == "FAILED" ]]; then
+elif [[ "$STATUS" == FAILED* ]]; then
     STATUS_EMOJI="❌"
-elif [[ "$STATUS" == "SKIPPED" ]]; then
-    STATUS_EMOJI="⏸️"
+elif [[ "$STATUS" == SKIPPED* ]]; then
+    STATUS_EMOJI="⏭️"
 fi
 
 # Determine footer
