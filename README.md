@@ -52,9 +52,27 @@ atlas
 | Command | Description |
 |---------|-------------|
 | `atlas init` | Initialize `.atlas/` in current project |
+| `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
+| `atlas [N]` | Run N iterations autonomously (default: 25) |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
-| `atlas [N]` | Run N iterations (default: 25) |
 | `atlas help` | Show help |
+
+---
+
+## Planning Mode
+
+For complex features, use `atlas plan` to interview and decompose before autonomous execution:
+
+```bash
+atlas plan "add user authentication with JWT"
+# → Interactive interview about requirements
+# → Generates spec in .atlas/specs/
+# → Creates tasks in backlog with **Spec:** field
+
+atlas 5
+# → Executes 5 tasks autonomously (no human intervention)
+# → Each task reads the full spec for context (integral view)
+```
 
 ---
 
@@ -131,6 +149,7 @@ your-project/
     ├── guardrails.md      # Rules from past errors
     ├── errors.log         # Failure log
     ├── activity.log       # Run history
+    ├── specs/             # Feature specs (from atlas plan)
     └── runs/              # Iteration logs
 ```
 

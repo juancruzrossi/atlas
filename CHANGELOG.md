@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-01-16
+
+### Added
+- `atlas plan "..."` command for interactive feature planning
+- Planning mode uses `AskUserQuestionTool` to interview user about requirements
+- Feature specs generated in `.atlas/specs/` directory
+- Tasks from planning include `**Spec:**` field for integral view
+- Main loop auto-loads spec file when task has `**Spec:**` field
+- `PLAN_PROMPT.md` with interview, spec generation, and task decomposition phases
+
+### Changed
+- Documentation updated: README, CLAUDE.md, CONTEXT_ENGINEERING.md
+- `atlas update` now includes PLAN_PROMPT.md
+
 ## [1.3.0] - 2026-01-16
 
 ### Added
