@@ -229,20 +229,19 @@ for i in $(seq 1 $MAX_ITERATIONS); do
         echo "  📋 Spec found: $CURRENT_TASK_SPEC"
     fi
 
-    # Build prompt with file references (not content)
+    # Build minimal prompt with file references only
     PROMPT="PROJECT_DIR=$PROJECT_DIR
 PROJECT_NAME=$PROJECT_NAME
 RUN_ID=$RUN_TAG
 ITERATION=$i
-BACKLOG_FILE=$BACKLOG_FILE
-GUARDRAILS_FILE=$GUARDRAILS_FILE
-PROGRESS_FILE=$PROGRESS_FILE
-ERRORS_LOG=$ERRORS_LOG
-SPEC_FILE=$SPEC_FILE
 
-CONTEXT_FILES_TO_READ:$CONTEXT_FILES
+PROMPT_FILE=$ATLAS_HOME/prompt.md
 
-$(cat "$ATLAS_HOME/prompt.md")"
+CONTEXT_FILES:$CONTEXT_FILES
+
+---
+
+You are Atlas. Read PROMPT_FILE for your instructions, then read all CONTEXT_FILES listed above."
 
     set +e
     OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true

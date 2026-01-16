@@ -5,9 +5,9 @@ Working directory: $PROJECT_DIR
 
 ## Setup (FIRST - MANDATORY)
 
-**Read ALL context files listed in CONTEXT_FILES_TO_READ above BEFORE doing anything else.**
+**Read ALL files listed in CONTEXT_FILES (from the initial prompt) BEFORE doing anything else.**
 
-Use the Read tool to load each file. These files contain critical context:
+Use the Read tool to load each file in parallel. These files contain critical context:
 - **backlog.md** - Task queue (TODO/IN_PROGRESS/DONE/DELAYED)
 - **guardrails.md** - Rules learned from past errors (MUST FOLLOW)
 - **progress.txt** - History and patterns from previous tasks
