@@ -202,54 +202,43 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
     log_activity "ITERATION $i START"
 
-    # Build prompt with all context files included
+    # Build list of context files that exist
+    CONTEXT_FILES=""
+    [[ -f "$BACKLOG_FILE" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- $BACKLOG_FILE (REQUIRED - task queue)"
+    [[ -f "$GUARDRAILS_FILE" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- $GUARDRAILS_FILE (rules from past errors)"
+    [[ -f "$PROGRESS_FILE" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- $PROGRESS_FILE (history of completed tasks)"
+    [[ -f "$ERRORS_LOG" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- $ERRORS_LOG (recent failures)"
+    [[ -f "CLAUDE.md" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- CLAUDE.md (project rules and quality gates)"
+
+    # Extract spec file from current task in backlog (if exists)
+    SPEC_FILE=""
+    CURRENT_TASK_SPEC=$(grep -A15 "^### " "$BACKLOG_FILE" | grep -m1 "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
+    if [[ -n "$CURRENT_TASK_SPEC" && -f "$CURRENT_TASK_SPEC" ]]; then
+        SPEC_FILE="$CURRENT_TASK_SPEC"
+        CONTEXT_FILES="$CONTEXT_FILES
+- $CURRENT_TASK_SPEC (INTEGRAL VIEW - full feature spec)"
+        echo "  📋 Spec found: $CURRENT_TASK_SPEC"
+    fi
+
+    # Build prompt with file references (not content)
     PROMPT="PROJECT_DIR=$PROJECT_DIR
 PROJECT_NAME=$PROJECT_NAME
 RUN_ID=$RUN_TAG
 ITERATION=$i
+BACKLOG_FILE=$BACKLOG_FILE
+GUARDRAILS_FILE=$GUARDRAILS_FILE
+PROGRESS_FILE=$PROGRESS_FILE
+ERRORS_LOG=$ERRORS_LOG
+SPEC_FILE=$SPEC_FILE
 
-$(cat "$ATLAS_HOME/prompt.md")
+CONTEXT_FILES_TO_READ:$CONTEXT_FILES
 
----
-
-# CONTEXT FILES (already loaded - do NOT read again)
-
-## .atlas/backlog.md
-\`\`\`markdown
-$(cat "$BACKLOG_FILE")
-\`\`\`
-
-## .atlas/guardrails.md
-\`\`\`markdown
-$(cat "$GUARDRAILS_FILE" 2>/dev/null || echo "# No guardrails yet")
-\`\`\`
-
-## .atlas/progress.txt
-\`\`\`
-$(cat "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
-\`\`\`
-
-## .atlas/errors.log
-\`\`\`
-$(cat "$ERRORS_LOG" 2>/dev/null || echo "# No errors yet")
-\`\`\`
-
-## CLAUDE.md (project rules)
-\`\`\`markdown
-$(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found - use standard practices")
-\`\`\`"
-
-    # Extract spec file from current task in backlog (if exists)
-    CURRENT_TASK_SPEC=$(grep -A15 "^### " "$BACKLOG_FILE" | grep -m1 "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
-    if [[ -n "$CURRENT_TASK_SPEC" && -f "$CURRENT_TASK_SPEC" ]]; then
-        PROMPT="$PROMPT
-
-## Feature Spec (INTEGRAL VIEW - read for full context)
-\`\`\`markdown
-$(cat "$CURRENT_TASK_SPEC")
-\`\`\`"
-        echo "  📋 Loaded spec: $CURRENT_TASK_SPEC"
-    fi
+$(cat "$ATLAS_HOME/prompt.md")"
 
     set +e
     OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
