@@ -55,11 +55,29 @@ atlas [command] [options]
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ATLAS_MAX_ITERATIONS` | Default max iterations | 10 |
-| `ATLAS_STALE_SECONDS` | Reset stuck stories after N seconds | 0 (disabled) |
+| `ATLAS_MAX_ITERATIONS` | Max iterations per run | 10 |
+| `ATLAS_TIMEOUT` | Timeout per iteration (seconds) | 1200 (20 min) |
+| `ATLAS_STALE_SECONDS` | Reset stuck tasks after N seconds | 7200 (2 hours) |
 | `ATLAS_NOTIFY_TELEGRAM` | Enable Telegram notifications | true |
 | `ATLAS_TELEGRAM_BOT` | Telegram bot token | - |
 | `ATLAS_TELEGRAM_CHAT` | Telegram chat ID | - |
+
+### Timeout
+
+Each iteration has a 20-minute timeout by default. If Claude hangs, the iteration is killed and the next one starts.
+
+```bash
+ATLAS_TIMEOUT=600 atlas 10   # 10 min timeout per iteration
+```
+
+### Stale Task Recovery
+
+If a task is stuck in `IN PROGRESS` for more than 2 hours (default), it's automatically moved back to `TODO` on the next run. This handles crashes or interrupted sessions.
+
+```bash
+ATLAS_STALE_SECONDS=3600 atlas 10  # Reset after 1 hour
+ATLAS_STALE_SECONDS=0 atlas 10     # Disable stale detection
+```
 
 ---
 
