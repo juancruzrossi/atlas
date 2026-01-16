@@ -166,12 +166,42 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
     log_activity "ITERATION $i START"
 
+    # Build prompt with all context files included
     PROMPT="PROJECT_DIR=$PROJECT_DIR
 PROJECT_NAME=$PROJECT_NAME
 RUN_ID=$RUN_TAG
 ITERATION=$i
 
-$(cat "$ATLAS_HOME/prompt.md")"
+$(cat "$ATLAS_HOME/prompt.md")
+
+---
+
+# CONTEXT FILES (already loaded - do NOT read again)
+
+## .atlas/backlog.md
+\`\`\`markdown
+$(cat "$BACKLOG_FILE")
+\`\`\`
+
+## .atlas/guardrails.md
+\`\`\`markdown
+$(cat "$GUARDRAILS_FILE" 2>/dev/null || echo "# No guardrails yet")
+\`\`\`
+
+## .atlas/progress.txt (last 30 lines)
+\`\`\`
+$(tail -30 "$PROGRESS_FILE" 2>/dev/null || echo "# No progress yet")
+\`\`\`
+
+## .atlas/errors.log (last 20 lines)
+\`\`\`
+$(tail -20 "$ERRORS_LOG" 2>/dev/null || echo "# No errors yet")
+\`\`\`
+
+## CLAUDE.md (project rules)
+\`\`\`markdown
+$(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found - use standard practices")
+\`\`\`"
 
     set +e
     OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
