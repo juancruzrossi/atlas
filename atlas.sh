@@ -48,6 +48,14 @@ case "${1:-}" in
             chmod +x "$ATLAS_HOME/atlas.sh" && \
             echo "  ✓ atlas.sh updated"
 
+        # Update the binary in PATH (if it's a copy, not a symlink)
+        ATLAS_BIN=$(which atlas 2>/dev/null)
+        if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then
+            cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && \
+                chmod +x "$ATLAS_BIN" && \
+                echo "  ✓ Binary updated: $ATLAS_BIN"
+        fi
+
         echo "  Downloading latest prompt.md..."
         curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" && \
             echo "  ✓ prompt.md updated"
