@@ -211,7 +211,7 @@ $(cat "CLAUDE.md" 2>/dev/null || echo "# No CLAUDE.md found - use standard pract
     ITER_DURATION=$((ITER_END - ITER_START))
     HEAD_AFTER=$(git_head)
 
-    SUMMARY=$(echo "$OUTPUT" | sed -n '/=== RESUMEN ===/,/Loop:/p' | head -10)
+    SUMMARY=$(echo "$OUTPUT" | sed -n '/=== SUMMARY ===/,/Loop:/p' | head -10)
     [[ -z "$SUMMARY" ]] && SUMMARY="No summary found"
 
     log_activity "ITERATION $i END duration=${ITER_DURATION}s"
