@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-01-16
+
+### Changed
+- Minimal initial prompt: only variables and file references (~10 lines vs ~100)
+- prompt.md now referenced via PROMPT_FILE instead of injected
+- Agent reads instructions from file like any other context file
+- More scalable: prompt size no longer grows with instruction changes
+
 ## [1.6.1] - 2026-01-16
 
 ### Fixed
