@@ -60,7 +60,11 @@ case "${1:-}" in
         # Get new version (skip Unreleased, find first X.Y.Z)
         NEW_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
 
-        echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
+        if [[ "$OLD_VERSION" == "$NEW_VERSION" ]]; then
+            echo "✓ Atlas v$NEW_VERSION (already up to date)"
+        else
+            echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
+        fi
         exit 0
         ;;
     plan)
