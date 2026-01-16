@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-01-16
+
+### Fixed
+- ATLAS_HOME now always points to ~/.atlas (binary can be anywhere)
+- Plan mode runs interactively (no -p flag) so AskUserQuestionTool works
+- Plan mode includes --dangerously-skip-permissions
+- Version grep skips Unreleased section, shows actual version number
+
+### Changed
+- Plan prompt simplified: references files instead of embedding content
+- Update output simplified: just shows "v1.4.0 → v1.5.0"
+- CLAUDE.md: must ask user about versioning before merging PRs
+
 ## [1.4.0] - 2026-01-16
 
 ### Added
