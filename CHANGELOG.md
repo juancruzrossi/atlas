@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-01-17
+
+### Added
+- Boundaries section in guardrails template with Always/Never rules
+- Clear guidelines for safe autonomous operation across any language/stack
+
 ## [1.7.0] - 2026-01-16
 
 ### Changed

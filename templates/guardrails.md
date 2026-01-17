@@ -36,6 +36,28 @@ When you encounter an error or learn something the hard way, add a Sign:
 
 ---
 
+## Boundaries
+
+### ✅ Always
+- Run existing tests before committing changes
+- Read file contents before making edits
+- Use available agents and skills when they fit the task
+- Follow project naming conventions and code style
+- Verify CI/PR checks pass before requesting merge
+- Write clear, conventional commit messages
+- Validate changes work before marking task complete
+
+### 🚫 Never
+- Commit secrets, credentials, or API keys
+- Force push to protected branches without explicit approval
+- Delete or skip failing tests without explicit approval
+- Bypass quality gates (linter, formatter, type checker, tests)
+- Leave temporary debug code in production
+- Edit auto-generated files directly (modify the source instead)
+- Ignore compiler/linter warnings without justification
+
+---
+
 ## Project-Specific Signs
 
 <!-- Add signs learned during this project below -->
