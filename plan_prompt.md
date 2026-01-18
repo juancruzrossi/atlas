@@ -27,56 +27,7 @@ Before starting, read these files for context:
 
 ## Phase 1: Interview (MANDATORY)
 
-**IMMEDIATELY** use the `AskUserQuestionTool` to start the interview. Ask about:
-
-1. **Functional Requirements**: What exactly should this feature do? Edge cases?
-2. **Technical Approach**: Preferred patterns, libraries, constraints?
-3. **UX/UI**: How should users interact with this? Error states?
-4. **Boundaries**: What is explicitly OUT of scope?
-5. **Risks**: What could go wrong? Dependencies on external systems?
-6. **Testing**: How should this be tested? Acceptance criteria?
-
-### Interview Rules
-
-- Start with 2-4 questions immediately using `AskUserQuestionTool`
-- Build on previous answers - don't repeat or ask obvious things
-- Reference context files when relevant (guardrails, CLAUDE.md patterns)
-- Continue asking until you have enough detail for a complete spec
-- If user selects "That's enough" or similar, proceed to Phase 2
-- Aim for 2-4 rounds of questions total
-
-### How to use AskUserQuestionTool
-
-Call the tool with this structure:
-
-```
-Tool: AskUserQuestionTool
-Parameters:
-  questions: [
-    {
-      "question": "What should happen when the API request fails?",
-      "header": "Error handling",
-      "options": [
-        {"label": "Silent retry", "description": "Retry 3 times before showing error"},
-        {"label": "Immediate error", "description": "Show error message right away"},
-        {"label": "Fallback", "description": "Use cached/default data"}
-      ],
-      "multiSelect": false
-    },
-    {
-      "question": "Which authentication method should the API use?",
-      "header": "Auth method",
-      "options": [
-        {"label": "JWT tokens", "description": "Stateless, good for microservices"},
-        {"label": "Session cookies", "description": "Traditional, easier to revoke"},
-        {"label": "API keys", "description": "Simple, good for server-to-server"}
-      ],
-      "multiSelect": false
-    }
-  ]
-```
-
-Always include 2-4 questions per call. Each question needs: question, header (short label), options (2-4 choices), multiSelect.
+Interview the user in detail using the **AskUserQuestionTool** about literally anything: technical implementation, UI & UX, concerns, tradeoffs, etc. Make sure the questions are not obvious. Be very in-depth and continue interviewing until it's complete.
 
 ---
 
