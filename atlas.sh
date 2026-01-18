@@ -78,13 +78,12 @@ case "${1:-}" in
         mkdir -p "$ATLAS_DIR/specs"
         SPEC_FILE="$ATLAS_DIR/specs/spec-$(date +%Y%m%d-%H%M%S).md"
 
-        PLAN_PROMPT="FEATURE_REQUEST=$FEATURE_PROMPT
-PROJECT_DIR=$PROJECT_DIR
-PROJECT_NAME=$PROJECT_NAME
-SPEC_FILE=$SPEC_FILE
-BACKLOG_FILE=$BACKLOG_FILE
+        # Export variables for envsubst
+        export FEATURE_REQUEST="$FEATURE_PROMPT"
+        export PROJECT_DIR PROJECT_NAME SPEC_FILE BACKLOG_FILE
 
-$(cat "$ATLAS_HOME/plan_prompt.md")"
+        # Process plan_prompt.md with variable substitution
+        PLAN_PROMPT=$(envsubst '$FEATURE_REQUEST $PROJECT_DIR $PROJECT_NAME $SPEC_FILE $BACKLOG_FILE' < "$ATLAS_HOME/plan_prompt.md")
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Plan - Feature Interview                       ║"
@@ -246,19 +245,20 @@ for i in $(seq 1 $MAX_ITERATIONS); do
         echo "  📋 Spec found: $CURRENT_TASK_SPEC"
     fi
 
-    # Build minimal prompt with file references only
-    PROMPT="PROJECT_DIR=$PROJECT_DIR
-PROJECT_NAME=$PROJECT_NAME
-RUN_ID=$RUN_TAG
-ITERATION=$i
+    # Export variables for envsubst
+    export PROJECT_DIR PROJECT_NAME
+    export RUN_ID="$RUN_TAG"
+    export ITERATION="$i"
 
-PROMPT_FILE=$ATLAS_HOME/prompt.md
+    # Process prompt.md with variable substitution
+    PROMPT_CONTENT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $RUN_ID $ITERATION' < "$ATLAS_HOME/prompt.md")
 
-CONTEXT_FILES:$CONTEXT_FILES
+    # Build prompt with processed instructions inline
+    PROMPT="CONTEXT_FILES:$CONTEXT_FILES
 
 ---
 
-You are Atlas. Read PROMPT_FILE for your instructions, then read all CONTEXT_FILES listed above."
+$PROMPT_CONTENT"
 
     set +e
     # Write prompt to temp file to avoid pipe issues with signals
