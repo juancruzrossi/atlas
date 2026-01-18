@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-01-18
+
+### Fixed
+- Ctrl+C now exits the iteration loop gracefully
+
 ## [1.8.1] - 2026-01-18
 
 ### Fixed
