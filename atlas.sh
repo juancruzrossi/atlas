@@ -47,7 +47,7 @@ case "${1:-}" in
         mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references"
         curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
         curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
-        curl -fsSL "$REPO_URL/PLAN_PROMPT.md" -o "$ATLAS_HOME/PLAN_PROMPT.md"
+        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md"
         curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md"
         curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
         for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null; done
@@ -83,7 +83,7 @@ PROJECT_NAME=$PROJECT_NAME
 SPEC_FILE=$SPEC_FILE
 BACKLOG_FILE=$BACKLOG_FILE
 
-$(cat "$ATLAS_HOME/PLAN_PROMPT.md")"
+$(cat "$ATLAS_HOME/plan_prompt.md")"
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Plan - Feature Interview                       ║"

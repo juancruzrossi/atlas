@@ -11,7 +11,7 @@ Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates ta
 ```
 atlas.sh            Main entry point - orchestrates the iteration loop
 prompt.md           System prompt for autonomous iterations
-PLAN_PROMPT.md      System prompt for interactive planning mode
+plan_prompt.md      System prompt for interactive planning mode
 notify-telegram.sh  Telegram notifications for iteration progress
 install.sh          Installer script for global installation
 templates/          Initial templates copied on `atlas init`
