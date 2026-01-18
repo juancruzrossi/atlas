@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-01-18
+
+### Fixed
+- Output capture reliability: Changed from pipe+tee to variable capture to avoid TTY buffering issues
+- ~38% of iteration logs were previously empty due to stdout buffering when not connected to TTY
+- Telegram notifications now show "Output not captured" instead of "No task" when logs are empty
+
+### Added
+- Boundaries section in prompt.md with explicit NEVER/ALWAYS rules
+- Prevents Claude from creating unexpected files (like ARCHITECTURE_REVIEW.md)
+- Warning message when no output is captured from Claude
+- UNKNOWN status emoji (❓) in Telegram notifications for capture failures
+
+### Changed
+- Output capture now uses variable assignment instead of tee pipe (more reliable)
+- Telegram notification handles empty summaries gracefully
+
 ## [1.8.2] - 2026-01-18
 
 ### Fixed

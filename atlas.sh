@@ -265,11 +265,20 @@ You are Atlas. Read PROMPT_FILE for your instructions, then read all CONTEXT_FIL
     PROMPT_FILE_TMP=$(mktemp)
     echo "$PROMPT" > "$PROMPT_FILE_TMP"
 
-    # Run claude in foreground - Ctrl+C will kill it
-    timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1 | tee "$LOG_FILE" || true
+    # Run claude and capture output to variable first (avoids buffering issues with pipes)
+    # This ensures we always capture the full output regardless of TTY buffering
+    OUTPUT=$(timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
 
     rm -f "$PROMPT_FILE_TMP"
-    OUTPUT=$(cat "$LOG_FILE" 2>/dev/null) || true
+
+    # Write output to log file and display to terminal
+    if [[ -n "$OUTPUT" ]]; then
+        echo "$OUTPUT" | tee "$LOG_FILE"
+    else
+        # If claude produced no output, create empty log and warn
+        touch "$LOG_FILE"
+        echo "⚠️  Warning: No output captured from Claude"
+    fi
     set -e
 
     ITER_END=$(date +%s)

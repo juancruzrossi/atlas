@@ -106,3 +106,18 @@ If TODO and IN_PROGRESS are both empty:
 - ALWAYS commit state changes immediately
 - ALWAYS end on main branch
 - ALWAYS print summary at the end
+
+## Boundaries (CRITICAL)
+
+**NEVER do these:**
+- Create documentation files (*.md) outside of .atlas/ unless task explicitly requires it
+- Create analysis reports, architecture reviews, or similar artifacts
+- Add files that weren't requested in the task
+- Over-engineer or add features not in the task spec
+- Commit files unrelated to the current task
+
+**ALWAYS do these:**
+- Stay focused on the specific task at hand
+- Only modify/create files directly required by the task
+- Keep changes minimal and targeted
+- If you find issues outside the task scope, note them in progress.txt for future iterations
