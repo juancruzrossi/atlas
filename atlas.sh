@@ -261,8 +261,15 @@ CONTEXT_FILES:$CONTEXT_FILES
 You are Atlas. Read PROMPT_FILE for your instructions, then read all CONTEXT_FILES listed above."
 
     set +e
-    # Run claude with --foreground so Ctrl+C propagates correctly
-    OUTPUT=$(echo "$PROMPT" | timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE") || true
+    # Write prompt to temp file to avoid pipe issues with signals
+    PROMPT_FILE_TMP=$(mktemp)
+    echo "$PROMPT" > "$PROMPT_FILE_TMP"
+
+    # Run claude in foreground - Ctrl+C will kill it
+    timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1 | tee "$LOG_FILE" || true
+
+    rm -f "$PROMPT_FILE_TMP"
+    OUTPUT=$(cat "$LOG_FILE" 2>/dev/null) || true
     set -e
 
     ITER_END=$(date +%s)
