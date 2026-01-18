@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-01-18
+
+### Changed
+- Variables in prompt.md and plan_prompt.md now use explicit `envsubst` substitution
+- Previously Claude had to mentally connect `ITERATION=2` with `$ITERATION` in text
+- Now Claude receives fully processed text: "Iteration 2 of run..." directly
+- More robust and less dependent on Claude's inference
+
 ## [1.9.0] - 2026-01-18
 
 ### Fixed
