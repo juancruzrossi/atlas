@@ -190,6 +190,15 @@ send_notification() {
 
 RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
 
+# Handle Ctrl+C gracefully
+cleanup() {
+    echo ""
+    echo "⛔ Interrupted by user"
+    log_activity "RUN INTERRUPTED run=$RUN_TAG"
+    exit 130
+}
+trap cleanup SIGINT SIGTERM
+
 echo "╔═══════════════════════════════════════════════════════╗"
 echo "║  Atlas - Autonomous Task Loop Agent System            ║"
 echo "╠═══════════════════════════════════════════════════════╣"
