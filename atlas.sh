@@ -191,9 +191,11 @@ send_notification() {
 RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
 
 # Handle Ctrl+C gracefully
+CLAUDE_PID=""
 cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
+    [[ -n "$CLAUDE_PID" ]] && kill -TERM "$CLAUDE_PID" 2>/dev/null
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
     exit 130
 }
@@ -259,7 +261,8 @@ CONTEXT_FILES:$CONTEXT_FILES
 You are Atlas. Read PROMPT_FILE for your instructions, then read all CONTEXT_FILES listed above."
 
     set +e
-    OUTPUT=$(echo "$PROMPT" | timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE" | tee /dev/stderr) || true
+    # Run claude with --foreground so Ctrl+C propagates correctly
+    OUTPUT=$(echo "$PROMPT" | timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p 2>&1 | tee "$LOG_FILE") || true
     set -e
 
     ITER_END=$(date +%s)
