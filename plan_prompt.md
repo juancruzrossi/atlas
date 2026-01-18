@@ -27,7 +27,7 @@ Before starting, read these files for context:
 
 ## Phase 1: Interview (MANDATORY)
 
-Interview the user in detail using the **AskUserQuestionTool** about literally anything: technical implementation, UI & UX, concerns, tradeoffs, etc. Make sure the questions are not obvious. Be very in-depth and continue interviewing until it's complete.
+Given `$FEATURE_REQUEST`, interview the user in detail using the **AskUserQuestionTool** about literally anything: technical implementation, UI & UX, concerns, tradeoffs, etc. Make sure the questions are not obvious. Be very in-depth and continue interviewing until it's complete.
 
 ---
 
