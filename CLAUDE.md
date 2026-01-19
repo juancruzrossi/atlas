@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates task processing using Claude Code. It reads tasks from a markdown backlog, creates branches, implements code, runs quality gates, creates PRs, merges them, and tracks progress—all autonomously in a loop.
+Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates task processing using Claude Code. It reads tasks from a markdown backlog, implements code, runs quality gates, and tracks progress—all autonomously in a loop.
+
+**Modes:**
+- **Git mode** (auto-detected): Creates branches, PRs, commits, and merges
+- **Local mode** (no .git/): Changes stay in working directory, no git operations
 
 ## Architecture
 
