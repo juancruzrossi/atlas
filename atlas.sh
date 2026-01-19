@@ -244,6 +244,8 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 - $ERRORS_LOG (recent failures)"
     [[ -f "CLAUDE.md" ]] && CONTEXT_FILES="$CONTEXT_FILES
 - CLAUDE.md (project rules and quality gates)"
+    [[ -f ".claude/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- .claude/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
 
     # Extract spec file from current task in backlog (if exists)
     SPEC_FILE=""

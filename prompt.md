@@ -21,6 +21,19 @@ Do NOT skip this step. Read files in parallel for efficiency.
 ## Algorithm
 
 ```
+0. IF GIT_MODE=true:
+   - IF .claude/integration-session.json exists AND status=active:
+     - BASE_BRANCH = read 'branch' from JSON (e.g. integration/xxx)
+     - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
+   - ELSE:
+     - SESSION_NAME = "atlas-$(date +%Y%m%d-%H%M%S)"
+     - BASE_BRANCH = "integration/$SESSION_NAME"
+     - git checkout main && git pull origin main
+     - git checkout -b $BASE_BRANCH && git push -u origin $BASE_BRANCH
+     - Create draft PR: gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME"
+     - Save .claude/integration-session.json with session_name, branch, pr_number, status=active
+     - git add .claude/ && git commit -m "chore: init integration session" && git push
+
 1. IF task in IN_PROGRESS → continue it
    ELSE IF task in TODO → pick FIRST one
    ELSE → go to step 8
@@ -28,7 +41,8 @@ Do NOT skip this step. Read files in parallel for efficiency.
 2. IF starting new task:
    - Move task to IN_PROGRESS in backlog.md
    - IF GIT_MODE=true:
-     - Create branch: [type]/[TASK_ID]-[short-description]
+     - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
+     - Create branch FROM integration: git checkout -b [type]/[TASK_ID]-[short-description]
      - git add .atlas/backlog.md && git commit -m "chore: start [TASK_ID]"
 
 3. Implement task completely
@@ -40,7 +54,10 @@ Do NOT skip this step. Read files in parallel for efficiency.
 5. IF quality gates FAIL → go to ERROR HANDLING
 
 6. IF GIT_MODE=true:
-   - Complete GitFlow: Create PR, merge with squash, return to main
+   - git push -u origin [current-branch]
+   - Create PR to integration: gh pr create --base $BASE_BRANCH --title "[type]: [description]"
+   - Merge with squash: gh pr merge --squash --delete-branch
+   - Return to integration: git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
    ELSE:
    - (skip - changes already in working directory)
 
@@ -48,7 +65,7 @@ Do NOT skip this step. Read files in parallel for efficiency.
    - Move task to DONE with date (and PR number if GIT_MODE=true)
    - Append to progress.txt (see format below)
    - Add Sign to guardrails.md if you learned something useful
-   - IF GIT_MODE=true: git add .atlas/ && git commit -m "chore: complete [TASK_ID]"
+   - IF GIT_MODE=true: git add .atlas/ && git commit -m "chore: complete [TASK_ID]" && git push
 
 8. Print summary (MANDATORY - see format below)
 ```
@@ -97,8 +114,8 @@ If build/test fails or task is blocked:
 2. Append to errors.log (see format below)
 3. Add Sign to guardrails.md if you learned something preventable
 4. IF GIT_MODE=true:
-   - git add .atlas/ && git commit -m "chore: delay [TASK_ID]"
-   - Return to main branch
+   - git add .atlas/ && git commit -m "chore: delay [TASK_ID]" && git push
+   - Discard feature branch: git checkout $BASE_BRANCH && git branch -D [feature-branch]
 5. Go to step 8
 
 ## File Formats
@@ -146,8 +163,9 @@ If TODO and IN_PROGRESS are both empty:
 - ONE task per iteration
 - READ context files BEFORE starting
 - WRITE to progress.txt and guardrails.md AFTER completing
-- IF GIT_MODE=true: commit state changes immediately
-- IF GIT_MODE=true: end on main branch
+- IF GIT_MODE=true: commit and push state changes immediately
+- IF GIT_MODE=true: always end on $BASE_BRANCH (integration branch, NOT main)
+- IF GIT_MODE=true: all PRs go to integration branch, NEVER to main
 - ALWAYS print summary at the end
 
 ## Boundaries (CRITICAL)
