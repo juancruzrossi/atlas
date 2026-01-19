@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-01-19
+
+### Added
+- **Integration branch workflow**: All Atlas work now goes to an integration branch, not main
+  - Step 0 in algorithm: auto-creates `integration/atlas-YYYYMMDD-HHMMSS` branch
+  - Creates draft PR to main automatically (for human review)
+  - `.claude/integration-session.json` tracks active session state
+  - All feature PRs target integration branch
+- **Atlas Skills**: Modular knowledge installed to `~/.claude/skills/`
+  - `atlas-integration-flow`: Integration branch workflow details
+  - `atlas-branching`: Branch naming, conventional commits, squash merge
+  - `atlas-guardrails`: Signs format, error handling, learning from failures
+  - `atlas-state`: backlog.md structure, progress.txt format, state transitions
+- Skills auto-installed on `atlas init` and `atlas update`
+
+### Changed
+- Feature branches now created from integration branch (not main)
+- PRs merged with squash to integration branch
+- `atlas.sh` passes `integration-session.json` as context file
+- `atlas.sh` downloads and installs skills from GitHub on update
+
 ## [1.11.0] - 2026-01-19
 
 ### Added
