@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Integration branch workflow for autonomous sessions
+- Step 0 in algorithm: auto-creates integration branch if not exists
+- `.claude/integration-session.json` tracks active session state
+- All feature PRs target integration branch, not main
+- Integration PR stays as draft for final human review
+
+### Changed
+- Feature branches now created from integration branch
+- PRs merged with squash to integration
+- `atlas.sh` includes integration-session.json in context files
+
 ## [1.11.0] - 2026-01-19
 
 ### Added
