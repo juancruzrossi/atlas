@@ -34,6 +34,18 @@ case "${1:-}" in
         [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Created: activity.log"
         [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Created: errors.log"
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
+
+        # Install Atlas skills to ~/.claude/skills/
+        if [[ -d "$ATLAS_HOME/skills" ]]; then
+            mkdir -p "${HOME}/.claude/skills"
+            for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                skill_name=$(basename "$skill_dir")
+                mkdir -p "${HOME}/.claude/skills/$skill_name"
+                cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
+            done
+            echo "  Installed: Atlas skills to ~/.claude/skills/"
+        fi
+
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
         exit 0
         ;;
@@ -44,7 +56,7 @@ case "${1:-}" in
         OLD_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
 
         # Download all files silently
-        mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references"
+        mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills"
         curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
         curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
         curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md"
@@ -53,6 +65,15 @@ case "${1:-}" in
         curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
         for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null; done
         for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null; done
+
+        # Download and install Atlas skills
+        SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
+        mkdir -p "${HOME}/.claude/skills"
+        for skill in $SKILLS; do
+            mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
+            curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+            [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]] && cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"
+        done
 
         # Update binary in PATH if needed
         ATLAS_BIN=$(which atlas 2>/dev/null)
@@ -66,6 +87,7 @@ case "${1:-}" in
         else
             echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
         fi
+        echo "✓ Skills installed to ~/.claude/skills/"
         exit 0
         ;;
     plan)
@@ -244,6 +266,8 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 - $ERRORS_LOG (recent failures)"
     [[ -f "CLAUDE.md" ]] && CONTEXT_FILES="$CONTEXT_FILES
 - CLAUDE.md (project rules and quality gates)"
+    [[ -f ".claude/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- .claude/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
 
     # Extract spec file from current task in backlog (if exists)
     SPEC_FILE=""
