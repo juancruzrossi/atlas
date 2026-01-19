@@ -13,11 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.claude/integration-session.json` tracks active session state
 - All feature PRs target integration branch, not main
 - Integration PR stays as draft for final human review
+- **Atlas Skills**: Modular skills installed to `~/.claude/skills/`
+  - `atlas-integration-flow`: Integration branch workflow details
+  - `atlas-branching`: Branch naming, conventional commits, squash merge
+  - `atlas-guardrails`: Signs format, error handling, learning from failures
+  - `atlas-state`: backlog.md structure, progress.txt format, state transitions
+- Skills auto-installed on `atlas init` and `atlas update`
 
 ### Changed
 - Feature branches now created from integration branch
 - PRs merged with squash to integration
 - `atlas.sh` includes integration-session.json in context files
+- `atlas.sh` now installs skills to `~/.claude/skills/` on init and update
 
 ## [1.11.0] - 2026-01-19
 
