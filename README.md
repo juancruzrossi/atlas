@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh
 ### Requirements
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-- Git
+- Git (optional - enables branches, PRs, and commits)
 
 ---
 
@@ -96,20 +96,24 @@ export ATLAS_TELEGRAM_CHAT="id"     # Telegram chat ID
 ```
 for each iteration:
     1. Resume task in IN_PROGRESS, or pick first from TODO
-    2. Create branch: [type]/[TASK_ID]-[description]
-    3. Move to IN_PROGRESS + commit
+    2. [git] Create branch: [type]/[TASK_ID]-[description]
+    3. Move to IN_PROGRESS [git: + commit]
     4. Implement task
     5. Run quality gates (from CLAUDE.md)
-    6. Create PR → merge (squash) → return to main
-    7. Move to DONE + commit
+    6. [git] Create PR → merge (squash) → return to main
+    7. Move to DONE [git: + commit]
     8. Write to progress.txt and guardrails.md
     9. If error → move to DELAYED
    10. If no tasks → exit loop
 ```
 
+**Modes:**
+- **Git mode** (default): Full GitFlow with branches, PRs, and commits
+- **Local mode**: Works without git - changes stay in working directory
+
 **Features:**
 - Context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
-- Commits state changes immediately (crash recovery)
+- Commits state changes immediately (crash recovery) [git mode]
 - Stale tasks auto-reset to TODO after timeout
 
 ---
