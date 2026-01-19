@@ -213,6 +213,16 @@ log_activity "RUN START run=$RUN_TAG iterations=$MAX_ITERATIONS"
 
 reset_stale_tasks
 
+# Detect git mode
+if [[ -d "$PROJECT_DIR/.git" ]]; then
+    export GIT_MODE="true"
+else
+    export GIT_MODE="false"
+    echo "⚠️  No git repository detected - running in LOCAL MODE"
+    echo "   (no branches, commits, or PRs will be created)"
+    echo ""
+fi
+
 for i in $(seq 1 $MAX_ITERATIONS); do
     echo "═══ ITERATION $i/$MAX_ITERATIONS ═══"
 
@@ -251,7 +261,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     export ITERATION="$i"
 
     # Process prompt.md with variable substitution
-    PROMPT_CONTENT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $RUN_ID $ITERATION' < "$ATLAS_HOME/prompt.md")
+    PROMPT_CONTENT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $RUN_ID $ITERATION $GIT_MODE' < "$ATLAS_HOME/prompt.md")
 
     # Build prompt with processed instructions inline
     PROMPT="CONTEXT_FILES:$CONTEXT_FILES
