@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-01-18
+
+### Added
+- Security scanning as quality gate before PR creation
+- Secret detection: gitleaks, trufflehog, git-secrets (tries available tools)
+- Vulnerability scanning: semgrep (30+ languages), plus language-specific fallbacks
+- Language-agnostic approach: adapts to Node.js, Python, Go, Ruby, Java, etc.
+- New guardrail Sign: "Security Scan Before PR"
+
+### Changed
+- Quality gates now split into: a) project gates, b) security scan
+- Behavior is "best effort": warns if tools not installed, never blocks on missing tools
+
 ## [1.9.1] - 2026-01-18
 
 ### Changed

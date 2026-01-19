@@ -31,7 +31,9 @@ Do NOT skip this step. Read files in parallel for efficiency.
 
 3. Implement task completely
 
-4. Run quality gates (from CLAUDE.md or project's build/test)
+4. Run quality gates:
+   a) Project gates (from CLAUDE.md): build, lint, test
+   b) Security scan (see Security Scanning section below)
 
 5. IF quality gates FAIL → go to ERROR HANDLING
 
@@ -48,6 +50,43 @@ Do NOT skip this step. Read files in parallel for efficiency.
 
 8. Print summary (MANDATORY - see format below)
 ```
+
+## Security Scanning
+
+Run security checks BEFORE creating PR. Adapt to available tools:
+
+**1. Secret Detection (REQUIRED if tool available)**
+```bash
+# Try in order, use first available:
+gitleaks detect --no-git -v          # Preferred
+trufflehog filesystem . --no-update  # Alternative
+git secrets --scan                   # Alternative
+```
+
+**2. Vulnerability Scan (RECOMMENDED if tool available)**
+```bash
+# Semgrep - works with 30+ languages (Python, JS, Java, Go, Ruby, etc.)
+semgrep scan --config auto --error --severity ERROR
+
+# If semgrep not available, use language-specific:
+# Node.js: npm audit --audit-level=high
+# Python:  pip-audit || safety check
+# Go:      govulncheck ./...
+# Ruby:    bundle audit check
+# Java:    mvn dependency-check:check
+```
+
+**Behavior:**
+- If tool found HIGH/CRITICAL issues → FAIL, fix before PR
+- If tool not installed → log warning in progress.txt, continue
+- If scan times out (>60s) → skip with warning, continue
+- NEVER install tools automatically (user's environment)
+
+**What to check for:**
+- Hardcoded secrets (API keys, passwords, tokens)
+- SQL injection, XSS, command injection patterns
+- Insecure dependencies with known CVEs
+- Sensitive data exposure
 
 ## Error Handling
 

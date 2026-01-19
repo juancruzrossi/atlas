@@ -34,6 +34,12 @@ When you encounter an error or learn something the hard way, add a Sign:
 - **Type**: Corrective
 - **Learned from**: Best practice
 
+### Sign: Security Scan Before PR
+- **Trigger**: Before creating a pull request
+- **Instruction**: Run available security tools (gitleaks, semgrep, npm audit, etc.) and fix HIGH/CRITICAL issues. Skip with warning if tools not installed.
+- **Type**: Preventive
+- **Learned from**: Best practice
+
 ---
 
 ## Boundaries
