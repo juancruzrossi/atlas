@@ -8,19 +8,19 @@ This is an INTERACTIVE session. You MUST use the `AskUserQuestionTool` to interv
 Do NOT just generate a spec without asking questions first.
 Do NOT ask questions as plain text - use the tool so the user can select options.
 
-## Variables
+## Context
 
-- `$FEATURE_REQUEST` - The initial feature description from the user
-- `$PROJECT_DIR` - Project directory
-- `$PROJECT_NAME` - Project name
-- `$SPEC_FILE` - Where to write the final spec
-- `$BACKLOG_FILE` - Path to backlog.md
+- **Project:** $PROJECT_NAME
+- **Directory:** $PROJECT_DIR
+- **Feature request:** $FEATURE_REQUEST
+- **Spec output:** $SPEC_FILE
+- **Backlog:** $BACKLOG_FILE
 
 ## Context Files (read these first)
 
 Before starting, read these files for context:
 - `CLAUDE.md` - Project rules and patterns
-- `.atlas/backlog.md` - Existing tasks (to auto-increment IDs)
+- `$BACKLOG_FILE` - Existing tasks (to auto-increment IDs)
 - `.atlas/guardrails.md` - Rules from past errors
 
 ---
@@ -85,7 +85,7 @@ After the interview, write a complete spec to `$SPEC_FILE` using the Write tool:
 
 ## Phase 3: Task Decomposition
 
-After writing the spec, decompose into tasks and append to `.atlas/backlog.md` using the Edit tool.
+After writing the spec, decompose into tasks and append to `$BACKLOG_FILE` using the Edit tool.
 
 ### Task Format
 
