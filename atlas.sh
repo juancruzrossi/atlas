@@ -205,6 +205,32 @@ reset_stale_tasks() {
 
 git_head() { git rev-parse --short HEAD 2>/dev/null || echo ""; }
 
+# Count tasks in backlog (bash-verified, not model-dependent)
+count_tasks() {
+    local file="$1"
+    [[ ! -f "$file" ]] && echo "0 0 0" && return
+
+    local in_section=""
+    local todo=0 in_progress=0 done=0
+
+    while IFS= read -r line; do
+        # Detect section headers
+        if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
+            in_section="${BASH_REMATCH[1]}"
+            [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
+        # Count tasks (lines starting with ### )
+        elif [[ "$line" =~ ^###[[:space:]] ]]; then
+            case "$in_section" in
+                TODO) ((todo++)) ;;
+                IN_PROGRESS) ((in_progress++)) ;;
+                DONE) ((done++)) ;;
+            esac
+        fi
+    done < "$file"
+
+    echo "$todo $in_progress $done"
+}
+
 send_notification() {
     [[ "$NOTIFY_TELEGRAM" == "true" ]] && [[ -x "$ATLAS_HOME/notify-telegram.sh" ]] && "$ATLAS_HOME/notify-telegram.sh" "$1" "$MAX_ITERATIONS" "$PROJECT_NAME" "$2" &
 }
@@ -378,7 +404,13 @@ $PROMPT_CONTENT"
     SUMMARY=$(echo "$OUTPUT" | sed -n '/=== SUMMARY ===/,/Loop:/p' | head -10)
     [[ -z "$SUMMARY" ]] && SUMMARY="No summary found"
 
-    log_activity "ITERATION $i END duration=${ITER_DURATION}s"
+    # Bash-verified task count (don't trust model's count)
+    read TODO_COUNT IN_PROGRESS_COUNT DONE_COUNT <<< $(count_tasks "$BACKLOG_FILE")
+    echo ""
+    echo "📊 Backlog status (verified):"
+    echo "   TODO: $TODO_COUNT | In Progress: $IN_PROGRESS_COUNT | Done: $DONE_COUNT"
+
+    log_activity "ITERATION $i END duration=${ITER_DURATION}s todo=$TODO_COUNT done=$DONE_COUNT"
     send_notification "$i" "$SUMMARY"
 
     if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
