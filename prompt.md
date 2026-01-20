@@ -31,12 +31,12 @@ Do NOT skip this step. Read files in parallel for efficiency.
 ```
 0. IF GIT_MODE=true:
    - FIRST: git checkout main && git pull origin main  ← ALWAYS start from main
-   - IF .claude/integration-session.json exists:
+   - IF .atlas/integration-session.json exists:
      - PR_NUMBER = read 'pr_number' from JSON
      - PR_STATE = gh pr view $PR_NUMBER --json state -q '.state'
      - IF PR_STATE="MERGED":
        - Delete local integration branch: git branch -D integration/... (ignore errors)
-       - Delete session file locally: rm .claude/integration-session.json
+       - Delete session file locally: rm .atlas/integration-session.json
        - (NO commit - main is likely protected; new session will have its own JSON)
        → Continue to create new session below
      - ELSE (PR still open):
@@ -50,8 +50,8 @@ Do NOT skip this step. Read files in parallel for efficiency.
      - **CRITICAL**: Create draft PR to main IMMEDIATELY after creating branch:
        gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME" --body "..."
      - Capture PR_NUMBER from gh pr create output
-     - Save .claude/integration-session.json with session_name, branch, pr_number, status=active
-     - git add .claude/ && git commit -m "chore: init integration session" && git push
+     - Save .atlas/integration-session.json with session_name, branch, pr_number, status=active
+     - git add .atlas/ && git commit -m "chore: init integration session" && git push
 
 1. IF task in IN_PROGRESS → continue it
    ELSE IF task in TODO → pick FIRST one
