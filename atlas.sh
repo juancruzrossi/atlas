@@ -407,10 +407,13 @@ $PROMPT_CONTENT"
     # Bash-verified task count (don't trust model's count)
     read TODO_COUNT IN_PROGRESS_COUNT DONE_COUNT <<< $(count_tasks "$BACKLOG_FILE")
     echo ""
-    echo "📊 Backlog status (verified):"
-    echo "   TODO: $TODO_COUNT | In Progress: $IN_PROGRESS_COUNT | Done: $DONE_COUNT"
+    echo "📊 Pending: $TODO_COUNT (verified)"
 
-    log_activity "ITERATION $i END duration=${ITER_DURATION}s todo=$TODO_COUNT done=$DONE_COUNT"
+    # Append verified count to summary for Telegram
+    SUMMARY="$SUMMARY
+Pending: $TODO_COUNT (verified)"
+
+    log_activity "ITERATION $i END duration=${ITER_DURATION}s pending=$TODO_COUNT"
     send_notification "$i" "$SUMMARY"
 
     if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then

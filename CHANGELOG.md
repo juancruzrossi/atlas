@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Bash-verified task counter after each iteration (don't trust model's count)
-- Shows TODO, In Progress, and Done counts from backlog.md
-- Logs task counts to activity.log
+- Bash-verified pending task counter after each iteration (don't trust model's count)
+- Shows pending count in terminal and Telegram notifications
+- Logs pending count to activity.log
 
 ### Changed
 - CLAUDE.md: Added mandatory development workflow (branch → PR → merge)
