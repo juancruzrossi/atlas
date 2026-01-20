@@ -322,14 +322,37 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     [[ -f ".atlas/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
 - .atlas/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
 
-    # Extract spec file from current task in backlog (if exists)
+    # Extract spec file from CURRENT task only (IN_PROGRESS first, then first TODO)
     SPEC_FILE=""
-    CURRENT_TASK_SPEC=$(grep -A15 "^### " "$BACKLOG_FILE" | grep -m1 "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
+    CURRENT_TASK_SPEC=""
+
+    # Get the current task block (IN_PROGRESS or first TODO)
+    # awk: find IN_PROGRESS section, get first task; if none, find TODO section, get first task
+    CURRENT_TASK_BLOCK=$(awk '
+        /^## IN_PROGRESS/ { in_section=1; next }
+        /^## TODO/ { if (!found) { in_section=1 } else { exit }; next }
+        /^## / { in_section=0; next }
+        in_section && /^### / {
+            found=1;
+            print;
+            while ((getline line) > 0) {
+                if (line ~ /^### / || line ~ /^## /) break
+                print line
+            }
+            exit
+        }
+    ' "$BACKLOG_FILE")
+
+    # Extract spec from the current task block only
+    if [[ -n "$CURRENT_TASK_BLOCK" ]]; then
+        CURRENT_TASK_SPEC=$(echo "$CURRENT_TASK_BLOCK" | grep "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
+    fi
+
     if [[ -n "$CURRENT_TASK_SPEC" && -f "$CURRENT_TASK_SPEC" ]]; then
         SPEC_FILE="$CURRENT_TASK_SPEC"
         CONTEXT_FILES="$CONTEXT_FILES
 - $CURRENT_TASK_SPEC (INTEGRAL VIEW - full feature spec)"
-        echo "  📋 Spec found: $CURRENT_TASK_SPEC"
+        echo "  📋 Spec: $CURRENT_TASK_SPEC"
     fi
 
     # Export variables for envsubst
