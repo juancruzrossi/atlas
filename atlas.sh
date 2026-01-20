@@ -240,6 +240,31 @@ reset_stale_tasks
 # Detect git mode
 if [[ -d "$PROJECT_DIR/.git" ]]; then
     export GIT_MODE="true"
+
+    # CRITICAL: Always start from main to ensure clean state
+    echo "📍 Ensuring clean git state..."
+    CURRENT_BRANCH=$(git branch --show-current)
+    if [[ "$CURRENT_BRANCH" != "main" ]]; then
+        echo "   Switching from '$CURRENT_BRANCH' to main..."
+        git checkout main 2>/dev/null || { echo "❌ Failed to checkout main"; exit 1; }
+    fi
+    git pull origin main 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
+
+    # Check for merged integration session and cleanup
+    if [[ -f ".claude/integration-session.json" ]]; then
+        SESSION_PR=$(jq -r '.pr_number' .claude/integration-session.json 2>/dev/null)
+        if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
+            PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
+            if [[ "$PR_STATE" == "MERGED" ]]; then
+                echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
+                OLD_BRANCH=$(jq -r '.branch' .claude/integration-session.json 2>/dev/null)
+                [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
+                rm -f .claude/integration-session.json
+                echo "   ✓ Cleaned up. New session will be created."
+            fi
+        fi
+    fi
+    echo ""
 else
     export GIT_MODE="false"
     echo "⚠️  No git repository detected - running in LOCAL MODE"

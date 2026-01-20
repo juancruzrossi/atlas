@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-01-20
+
+### Added
+- **CRITICAL**: atlas.sh now forces checkout to main before starting iterations
+- Automatic cleanup of merged integration sessions in bash (not dependent on model)
+- Validates git state before invoking Claude to prevent stale branch issues
+
+### Fixed
+- Model no longer needs to follow "checkout main first" instruction - bash enforces it
+- Prevents working on already-merged integration branches
+
 ## [1.13.0] - 2026-01-20
 
 ### Added
