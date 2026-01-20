@@ -44,7 +44,7 @@ All state files live in `.atlas/` directory:
 ### TASK-002: Another task
 - **Category:** fix
 
-## IN PROGRESS
+## IN_PROGRESS
 
 ### TASK-003: Current task (STARTED: 2026-01-19)
 - **Category:** feature
@@ -63,27 +63,27 @@ All state files live in `.atlas/` directory:
 
 ### Moving Tasks
 
-**TODO → IN PROGRESS**:
+**TODO → IN_PROGRESS**:
 ```markdown
 # Before (in TODO)
 ### TASK-001: Add feature
 
-# After (in IN PROGRESS)
+# After (in IN_PROGRESS)
 ### TASK-001: Add feature (STARTED: 2026-01-19)
 ```
 
-**IN PROGRESS → DONE**:
+**IN_PROGRESS → DONE**:
 ```markdown
-# Before (in IN PROGRESS)
+# Before (in IN_PROGRESS)
 ### TASK-001: Add feature (STARTED: 2026-01-19)
 
 # After (in DONE)
 ### TASK-001: Add feature (2026-01-19) - PR #45
 ```
 
-**IN PROGRESS → DELAYED**:
+**IN_PROGRESS → DELAYED**:
 ```markdown
-# Before (in IN PROGRESS)
+# Before (in IN_PROGRESS)
 ### TASK-001: Add feature (STARTED: 2026-01-19)
 
 # After (in DELAYED)
@@ -93,9 +93,9 @@ All state files live in `.atlas/` directory:
 
 ### Task Selection
 
-1. If task in IN PROGRESS → continue that task
-2. If no task in IN PROGRESS → pick FIRST task from TODO
-3. If TODO and IN PROGRESS empty → session complete
+1. If task in IN_PROGRESS → continue that task
+2. If no task in IN_PROGRESS → pick FIRST task from TODO
+3. If TODO and IN_PROGRESS empty → session complete
 
 **NEVER skip tasks. ALWAYS pick the first one.**
 
@@ -196,7 +196,7 @@ The spec contains:
 
 ## Session Complete
 
-When TODO and IN PROGRESS are both empty:
+When TODO and IN_PROGRESS are both empty:
 
 1. Print summary
 2. Output `<promise>COMPLETE</promise>`

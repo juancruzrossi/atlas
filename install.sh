@@ -11,6 +11,7 @@ mkdir -p "$INSTALL_DIR"
 # Download main files
 curl -fsSL "$REPO_URL/atlas.sh" -o "$INSTALL_DIR/atlas"
 curl -fsSL "$REPO_URL/prompt.md" -o "$INSTALL_DIR/prompt.md"
+curl -fsSL "$REPO_URL/plan_prompt.md" -o "$INSTALL_DIR/plan_prompt.md"
 curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$INSTALL_DIR/notify-telegram.sh"
 
 chmod +x "$INSTALL_DIR/atlas" "$INSTALL_DIR/notify-telegram.sh"
