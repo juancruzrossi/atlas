@@ -126,7 +126,7 @@ for each iteration:
 - **Category:** feature
 - **Description:** What needs to be done
 
-## IN PROGRESS
+## IN_PROGRESS
 
 ## DONE
 ### HIGH-000: Completed task ✓

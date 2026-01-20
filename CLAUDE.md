@@ -29,7 +29,7 @@ references/         Documentation about context engineering and guardrails
 4. Logs iteration to `$RUNS_DIR` and optionally notifies Telegram
 
 **State files** (in `.atlas/` within target project):
-- `backlog.md` - Task queue (TODO/IN PROGRESS/DONE/DELAYED sections)
+- `backlog.md` - Task queue (TODO/IN_PROGRESS/DONE/DELAYED sections)
 - `guardrails.md` - Rules learned from past errors (Signs methodology)
 - `progress.txt` - Learnings and context from completed tasks
 - `errors.log` - Recent failure log

@@ -20,7 +20,7 @@
 - **Acceptance:** How to verify done
 -->
 
-## IN PROGRESS
+## IN_PROGRESS
 
 ## DONE
 

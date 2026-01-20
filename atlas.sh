@@ -164,12 +164,12 @@ mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
 
-# Check for stale tasks in IN PROGRESS and move back to TODO
+# Check for stale tasks in IN_PROGRESS and move back to TODO
 reset_stale_tasks() {
     [[ "$STALE_SECONDS" -eq 0 ]] && return
 
-    # Check if there's a task in IN PROGRESS
-    local in_progress_task=$(sed -n '/^## IN PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
+    # Check if there's a task in IN_PROGRESS
+    local in_progress_task=$(sed -n '/^## IN_PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
     [[ -z "$in_progress_task" ]] && return
 
     # Find most recent run log to determine age
@@ -182,16 +182,16 @@ reset_stale_tasks() {
 
     [[ "$age" -le "$STALE_SECONDS" ]] && return
 
-    echo "⚠️  Stale task in IN PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
+    echo "⚠️  Stale task in IN_PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
     echo "   Resetting to TODO..."
 
-    # Extract full task block from IN PROGRESS
-    local task_block=$(sed -n '/^## IN PROGRESS$/,/^## DONE$/{/^## /d;p;}' "$BACKLOG_FILE")
+    # Extract full task block from IN_PROGRESS
+    local task_block=$(sed -n '/^## IN_PROGRESS$/,/^## DONE$/{/^## /d;p;}' "$BACKLOG_FILE")
     [[ -z "$task_block" ]] && return
 
-    # Create temp file with task moved back to TODO (insert before IN PROGRESS)
+    # Create temp file with task moved back to TODO (insert before IN_PROGRESS)
     awk -v task="$task_block" '
-        /^## IN PROGRESS$/ { print task; print ""; print; in_progress=1; next }
+        /^## IN_PROGRESS$/ { print task; print ""; print; in_progress=1; next }
         /^## DONE$/ { in_progress=0 }
         in_progress && /^### / { next }
         in_progress && /^- \*\*/ { next }

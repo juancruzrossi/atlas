@@ -14,7 +14,7 @@ Since context resets each iteration, persist state in files:
 
 | What | Where |
 |------|-------|
-| Task progress | `backlog.md` (TODO/IN PROGRESS/DONE sections) |
+| Task progress | `backlog.md` (TODO/IN_PROGRESS/DONE sections) |
 | Learnings | `progress.txt` |
 | Error patterns | `guardrails.md` |
 | Recent failures | `errors.log` |
