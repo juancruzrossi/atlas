@@ -29,17 +29,44 @@ main (protected)
         └── fix/TASK-003      → PR to integration ✓ merged
 ```
 
-## Step 0: Initialize Integration Session
+## Step 0: Start Every Iteration
 
-**On first iteration** (when `.claude/integration-session.json` does NOT exist):
+**CRITICAL**: ALWAYS start from main, then check for existing session.
+
+```bash
+# 1. ALWAYS start from main
+git checkout main && git pull origin main
+
+# 2. Check for existing session
+if [[ -f .claude/integration-session.json ]]; then
+  PR_NUMBER=$(jq -r '.pr_number' .claude/integration-session.json)
+  PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q '.state')
+
+  if [[ "$PR_STATE" == "MERGED" ]]; then
+    # Session was merged - cleanup locally and create new
+    BRANCH=$(jq -r '.branch' .claude/integration-session.json)
+    git branch -D "$BRANCH" 2>/dev/null || true  # Delete local branch
+    rm .claude/integration-session.json  # Delete locally (no commit to main - it's protected)
+    # Continue to create new session below
+  else
+    # Session still active - use it
+    BASE_BRANCH=$(jq -r '.branch' .claude/integration-session.json)
+    git checkout "$BASE_BRANCH" && git pull origin "$BASE_BRANCH"
+    # Skip to step 1
+  fi
+fi
+```
+
+## Creating New Integration Session
+
+**When no session exists** (first iteration or after cleanup):
 
 ```bash
 # 1. Generate session name
 SESSION_NAME="atlas-$(date +%Y%m%d-%H%M%S)"
 BASE_BRANCH="integration/$SESSION_NAME"
 
-# 2. Create integration branch from main
-git checkout main && git pull origin main
+# 2. Create integration branch (already on main from step 0)
 git checkout -b "$BASE_BRANCH"
 git push -u origin "$BASE_BRANCH"
 
@@ -78,18 +105,17 @@ git commit -m "chore: init integration session $SESSION_NAME"
 git push
 ```
 
-## Subsequent Iterations
+## Why Start from Main?
 
-**When `.claude/integration-session.json` EXISTS**:
+If you start directly on an old integration branch:
+1. The user may have already merged the PR on GitHub
+2. You'd be working on a stale branch
+3. New Atlas runs would start from the wrong base
 
-```bash
-# Read existing session
-BASE_BRANCH=$(jq -r '.branch' .claude/integration-session.json)
-
-# Checkout and pull latest
-git checkout "$BASE_BRANCH"
-git pull origin "$BASE_BRANCH"
-```
+By ALWAYS starting from main and checking PR state, we ensure:
+- Fresh state on every iteration start
+- Automatic cleanup of merged sessions
+- New sessions created from latest main
 
 ## Creating Feature Branches
 
