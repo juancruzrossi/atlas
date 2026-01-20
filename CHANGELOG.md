@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-01-20
+
+### Changed
+- Move `integration-session.json` from `.claude/` to `.atlas/` for consistency
+- All Atlas state files now live in `.atlas/` directory
+
 ## [1.15.0] - 2026-01-20
 
 ### Added

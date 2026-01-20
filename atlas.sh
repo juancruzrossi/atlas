@@ -277,15 +277,15 @@ if [[ -d "$PROJECT_DIR/.git" ]]; then
     git pull origin main 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
 
     # Check for merged integration session and cleanup
-    if [[ -f ".claude/integration-session.json" ]]; then
-        SESSION_PR=$(jq -r '.pr_number' .claude/integration-session.json 2>/dev/null)
+    if [[ -f ".atlas/integration-session.json" ]]; then
+        SESSION_PR=$(jq -r '.pr_number' .atlas/integration-session.json 2>/dev/null)
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
             PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
-                OLD_BRANCH=$(jq -r '.branch' .claude/integration-session.json 2>/dev/null)
+                OLD_BRANCH=$(jq -r '.branch' .atlas/integration-session.json 2>/dev/null)
                 [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
-                rm -f .claude/integration-session.json
+                rm -f .atlas/integration-session.json
                 echo "   ✓ Cleaned up. New session will be created."
             fi
         fi
@@ -319,8 +319,8 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 - $ERRORS_LOG (recent failures)"
     [[ -f "CLAUDE.md" ]] && CONTEXT_FILES="$CONTEXT_FILES
 - CLAUDE.md (project rules and quality gates)"
-    [[ -f ".claude/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
-- .claude/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
+    [[ -f ".atlas/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- .atlas/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
 
     # Extract spec file from current task in backlog (if exists)
     SPEC_FILE=""

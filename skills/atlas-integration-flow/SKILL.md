@@ -38,19 +38,19 @@ main (protected)
 git checkout main && git pull origin main
 
 # 2. Check for existing session
-if [[ -f .claude/integration-session.json ]]; then
-  PR_NUMBER=$(jq -r '.pr_number' .claude/integration-session.json)
+if [[ -f .atlas/integration-session.json ]]; then
+  PR_NUMBER=$(jq -r '.pr_number' .atlas/integration-session.json)
   PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q '.state')
 
   if [[ "$PR_STATE" == "MERGED" ]]; then
     # Session was merged - cleanup locally and create new
-    BRANCH=$(jq -r '.branch' .claude/integration-session.json)
+    BRANCH=$(jq -r '.branch' .atlas/integration-session.json)
     git branch -D "$BRANCH" 2>/dev/null || true  # Delete local branch
-    rm .claude/integration-session.json  # Delete locally (no commit to main - it's protected)
+    rm .atlas/integration-session.json  # Delete locally (no commit to main - it's protected)
     # Continue to create new session below
   else
     # Session still active - use it
-    BASE_BRANCH=$(jq -r '.branch' .claude/integration-session.json)
+    BASE_BRANCH=$(jq -r '.branch' .atlas/integration-session.json)
     git checkout "$BASE_BRANCH" && git pull origin "$BASE_BRANCH"
     # Skip to step 1
   fi
@@ -87,9 +87,8 @@ _Se actualizará con cada feature mergeada_
 ")
 PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
 
-# 4. Create session file
-mkdir -p .claude
-cat > .claude/integration-session.json << EOF
+# 4. Create session file (.atlas/ already exists from atlas init)
+cat > .atlas/integration-session.json << EOF
 {
   "session_name": "$SESSION_NAME",
   "branch": "$BASE_BRANCH",
@@ -100,7 +99,7 @@ cat > .claude/integration-session.json << EOF
 EOF
 
 # 5. Commit session file
-git add .claude/integration-session.json
+git add .atlas/integration-session.json
 git commit -m "chore: init integration session $SESSION_NAME"
 git push
 ```
