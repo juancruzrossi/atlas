@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.4] - 2026-01-20
+
+### Fixed
+- Standardize section name to `## IN_PROGRESS` (with underscore) across all files
+- `reset_stale_tasks()` was searching for `## IN PROGRESS` (with space) but template used underscore - stale detection never worked
+- install.sh now downloads `plan_prompt.md` (was missing, `atlas plan` would fail on fresh install)
+
+### Changed
+- Updated templates, skills, README, CLAUDE.md, and references for consistency
+
 ## [1.15.3] - 2026-01-20
 
 ### Fixed
