@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.3] - 2026-01-20
+
+### Fixed
+- Spec extraction now reads only from current task (IN_PROGRESS or first TODO), not first spec in entire backlog
+- Tasks without `**Spec:**` field no longer load any spec file
+
 ## [1.15.2] - 2026-01-20
 
 ### Fixed
