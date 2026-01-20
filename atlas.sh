@@ -240,12 +240,11 @@ CONSECUTIVE_ERRORS=0
 MAX_CONSECUTIVE_ERRORS=3
 
 # Handle Ctrl+C gracefully
-CLAUDE_PID=""
 cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
-    [[ -n "$CLAUDE_PID" ]] && kill -TERM "$CLAUDE_PID" 2>/dev/null
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
+    [[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
     exit 130
 }
 trap cleanup SIGINT SIGTERM
@@ -326,15 +325,14 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     SPEC_FILE=""
     CURRENT_TASK_SPEC=""
 
-    # Get the current task block (IN_PROGRESS or first TODO)
-    # awk: find IN_PROGRESS section, get first task; if none, find TODO section, get first task
+    # Get the current task block (IN_PROGRESS first, then TODO if empty)
     CURRENT_TASK_BLOCK=$(awk '
-        /^## IN_PROGRESS/ { in_section=1; next }
-        /^## TODO/ { if (!found) { in_section=1 } else { exit }; next }
-        /^## / { in_section=0; next }
-        in_section && /^### / {
-            found=1;
-            print;
+        /^## IN_PROGRESS/ { section="IP"; next }
+        /^## TODO/ { if (section != "IP" || !found) section="TODO"; next }
+        /^## / { section=""; next }
+        section && /^### / {
+            found=1
+            print
             while ((getline line) > 0) {
                 if (line ~ /^### / || line ~ /^## /) break
                 print line

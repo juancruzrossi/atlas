@@ -96,11 +96,11 @@ export ATLAS_TELEGRAM_CHAT="id"     # Telegram chat ID
 ```
 for each iteration:
     1. Resume task in IN_PROGRESS, or pick first from TODO
-    2. [git] Create branch: [type]/[TASK_ID]-[description]
+    2. [git] Create branch from integration: [type]/[TASK_ID]-[description]
     3. Move to IN_PROGRESS [git: + commit]
     4. Implement task
     5. Run quality gates (from CLAUDE.md)
-    6. [git] Create PR → merge (squash) → return to main
+    6. [git] Create PR → merge (squash) to integration branch
     7. Move to DONE [git: + commit]
     8. Write to progress.txt and guardrails.md
     9. If error → move to DELAYED
@@ -108,7 +108,7 @@ for each iteration:
 ```
 
 **Modes:**
-- **Git mode** (default): Full GitFlow with branches, PRs, and commits
+- **Git mode** (default): Creates integration branch, PRs merge there, human reviews before main
 - **Local mode**: Works without git - changes stay in working directory
 
 **Features:**
