@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.2] - 2026-01-20
+
+### Fixed
+- **CLI retry logic**: Now performs real retries (3 silent attempts per iteration) instead of consuming iterations
+- Telegram notifications only sent after all retries exhausted, not on each attempt
+- CLI error notifications now show proper format with task, status, and pending count
+
 ## [1.15.1] - 2026-01-20
 
 ### Changed

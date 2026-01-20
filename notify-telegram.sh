@@ -60,6 +60,10 @@ elif [[ "$STATUS" == FAILED* ]]; then
     STATUS_EMOJI="❌"
 elif [[ "$STATUS" == SKIPPED* ]]; then
     STATUS_EMOJI="⏭️"
+elif [[ "$STATUS" == STOPPED* ]]; then
+    STATUS_EMOJI="🛑"
+elif [[ "$STATUS" == RETRY* ]]; then
+    STATUS_EMOJI="🔄"
 elif [[ "$STATUS" == UNKNOWN* ]]; then
     STATUS_EMOJI="❓"
 fi
