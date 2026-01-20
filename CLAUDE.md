@@ -79,12 +79,24 @@ This is a pure bash project. No build step required.
 
 ## GitFlow & Releases
 
-**Before merging any PR, ASK the user:**
-> "¿Nueva versión (ej: 1.5.0) o va a Unreleased?"
+### Development Workflow (OBLIGATORIO)
 
-Then:
-1. If **new version**: Create version section in CHANGELOG with date
-2. If **Unreleased**: Add to `[Unreleased]` section
+**NUNCA hacer commits directos a main.** Siempre seguir este flujo:
+
+1. Crear rama desde main: `git checkout -b [type]/[description]`
+2. Hacer cambios y commits en esa rama
+3. Actualizar CHANGELOG.md con versión sugerida (ver SemVer abajo)
+4. Push de la rama: `git push -u origin [branch]`
+5. Crear PR: `gh pr create --title "..." --body "..."`
+6. Mergear con squash: `gh pr merge --squash --delete-branch`
+7. Volver a main: `git checkout main && git pull`
+
+### Versionado
+
+**Antes de crear el PR, SIEMPRE:**
+1. Sugerir versión según SemVer
+2. Preguntar al usuario: "¿Nueva versión (ej: 1.5.0) o va a Unreleased?"
+3. Actualizar CHANGELOG.md según respuesta
 
 **SemVer rules:**
 - **patch** (1.4.1): bug fixes
