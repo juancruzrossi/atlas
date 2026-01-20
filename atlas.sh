@@ -352,41 +352,70 @@ $PROMPT_CONTENT"
     PROMPT_FILE_TMP=$(mktemp)
     echo "$PROMPT" > "$PROMPT_FILE_TMP"
 
-    # Run claude and capture output to variable first (avoids buffering issues with pipes)
-    # This ensures we always capture the full output regardless of TTY buffering
-    OUTPUT=$(timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+    # Retry loop for transient CLI errors (rate limits, timeouts, network)
+    MAX_RETRIES=3
+    RETRY_DELAY=10
+    RETRY_COUNT=0
+    CLI_SUCCESS=false
+    CLI_ERROR=""
+
+    while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+
+        # Run claude and capture output
+        OUTPUT=$(timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+
+        # Check for CLI errors
+        CLI_ERROR=""
+        if [[ -z "$OUTPUT" ]]; then
+            CLI_ERROR="No output captured"
+        elif echo "$OUTPUT" | grep -q "Error: No messages returned"; then
+            CLI_ERROR="API rate limit or timeout"
+        elif echo "$OUTPUT" | grep -q "Error: API"; then
+            CLI_ERROR="API error"
+        elif echo "$OUTPUT" | grep -q "Error: Network"; then
+            CLI_ERROR="Network error"
+        fi
+
+        if [[ -z "$CLI_ERROR" ]]; then
+            CLI_SUCCESS=true
+            break
+        fi
+
+        # Log retry attempt (console only, no notification yet)
+        echo "⚠️  CLI Error: $CLI_ERROR (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        log_activity "ITERATION $i RETRY $RETRY_COUNT: $CLI_ERROR"
+
+        if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+            echo "   Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+        fi
+    done
 
     rm -f "$PROMPT_FILE_TMP"
 
-    # Check for CLI errors before processing output
-    CLI_ERROR=""
-    if [[ -z "$OUTPUT" ]]; then
-        CLI_ERROR="No output captured"
-    elif echo "$OUTPUT" | grep -q "Error: No messages returned"; then
-        CLI_ERROR="API returned no messages (rate limit or timeout)"
-    elif echo "$OUTPUT" | grep -q "Error: API"; then
-        CLI_ERROR="API error"
-    elif echo "$OUTPUT" | grep -q "Error: Network"; then
-        CLI_ERROR="Network error"
-    fi
-
-    # If CLI error, log and handle retry logic
-    if [[ -n "$CLI_ERROR" ]]; then
+    # Handle complete failure after all retries exhausted
+    if [[ "$CLI_SUCCESS" == "false" ]]; then
         CONSECUTIVE_ERRORS=$((CONSECUTIVE_ERRORS + 1))
-        echo "⚠️  CLI Error: $CLI_ERROR (attempt $CONSECUTIVE_ERRORS/$MAX_CONSECUTIVE_ERRORS)"
+        echo "❌ Failed after $MAX_RETRIES attempts"
         echo "$OUTPUT" > "$LOG_FILE"
-        log_activity "ITERATION $i ERROR: $CLI_ERROR (attempt $CONSECUTIVE_ERRORS)"
+
+        read ERROR_TODO ERROR_IP ERROR_DONE <<< $(count_tasks "$BACKLOG_FILE")
 
         if [[ $CONSECUTIVE_ERRORS -ge $MAX_CONSECUTIVE_ERRORS ]]; then
-            echo "❌ Too many consecutive errors ($MAX_CONSECUTIVE_ERRORS). Stopping."
-            send_notification "$i" "❌ STOPPED: $MAX_CONSECUTIVE_ERRORS consecutive CLI errors"
-            log_activity "RUN STOPPED: too many consecutive errors"
+            echo "🛑 Too many consecutive failed iterations ($CONSECUTIVE_ERRORS). Stopping run."
+            send_notification "$i" "Task: CLI Error - $CLI_ERROR
+Status: STOPPED
+Pending: $ERROR_TODO"
+            log_activity "RUN STOPPED: $CONSECUTIVE_ERRORS consecutive failed iterations"
             exit 1
         fi
 
-        send_notification "$i" "⚠️ CLI Error (retry $CONSECUTIVE_ERRORS/$MAX_CONSECUTIVE_ERRORS)"
-        echo "   Waiting 10s before retry..."
-        sleep 10
+        # Notify only after all retries failed
+        send_notification "$i" "Task: CLI Error - $CLI_ERROR (after $MAX_RETRIES retries)
+Status: SKIPPED
+Pending: $ERROR_TODO"
+        log_activity "ITERATION $i FAILED after $MAX_RETRIES retries, moving to next"
         continue
     fi
 
