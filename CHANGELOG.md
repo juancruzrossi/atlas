@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-01-20
+
+### Added
+- CLI error detection and retry logic in atlas.sh
+- Detects "No messages returned", API errors, network errors
+- Automatic retry with 10s delay on CLI errors
+- Stops after 3 consecutive errors to prevent infinite loops
+- Telegram notifications for error states
+
 ## [1.12.3] - 2026-01-20
 
 ### Fixed

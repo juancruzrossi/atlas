@@ -210,6 +210,8 @@ send_notification() {
 }
 
 RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
+CONSECUTIVE_ERRORS=0
+MAX_CONSECUTIVE_ERRORS=3
 
 # Handle Ctrl+C gracefully
 CLAUDE_PID=""
@@ -305,14 +307,43 @@ $PROMPT_CONTENT"
 
     rm -f "$PROMPT_FILE_TMP"
 
-    # Write output to log file and display to terminal
-    if [[ -n "$OUTPUT" ]]; then
-        echo "$OUTPUT" | tee "$LOG_FILE"
-    else
-        # If claude produced no output, create empty log and warn
-        touch "$LOG_FILE"
-        echo "⚠️  Warning: No output captured from Claude"
+    # Check for CLI errors before processing output
+    CLI_ERROR=""
+    if [[ -z "$OUTPUT" ]]; then
+        CLI_ERROR="No output captured"
+    elif echo "$OUTPUT" | grep -q "Error: No messages returned"; then
+        CLI_ERROR="API returned no messages (rate limit or timeout)"
+    elif echo "$OUTPUT" | grep -q "Error: API"; then
+        CLI_ERROR="API error"
+    elif echo "$OUTPUT" | grep -q "Error: Network"; then
+        CLI_ERROR="Network error"
     fi
+
+    # If CLI error, log and handle retry logic
+    if [[ -n "$CLI_ERROR" ]]; then
+        CONSECUTIVE_ERRORS=$((CONSECUTIVE_ERRORS + 1))
+        echo "⚠️  CLI Error: $CLI_ERROR (attempt $CONSECUTIVE_ERRORS/$MAX_CONSECUTIVE_ERRORS)"
+        echo "$OUTPUT" > "$LOG_FILE"
+        log_activity "ITERATION $i ERROR: $CLI_ERROR (attempt $CONSECUTIVE_ERRORS)"
+
+        if [[ $CONSECUTIVE_ERRORS -ge $MAX_CONSECUTIVE_ERRORS ]]; then
+            echo "❌ Too many consecutive errors ($MAX_CONSECUTIVE_ERRORS). Stopping."
+            send_notification "$i" "❌ STOPPED: $MAX_CONSECUTIVE_ERRORS consecutive CLI errors"
+            log_activity "RUN STOPPED: too many consecutive errors"
+            exit 1
+        fi
+
+        send_notification "$i" "⚠️ CLI Error (retry $CONSECUTIVE_ERRORS/$MAX_CONSECUTIVE_ERRORS)"
+        echo "   Waiting 10s before retry..."
+        sleep 10
+        continue
+    fi
+
+    # Reset error counter on successful iteration
+    CONSECUTIVE_ERRORS=0
+
+    # Write output to log file and display to terminal
+    echo "$OUTPUT" | tee "$LOG_FILE"
     set -e
 
     ITER_END=$(date +%s)
