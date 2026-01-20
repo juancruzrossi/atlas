@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-01-19
+
+### Fixed
+- Integration session cleanup: now ALWAYS starts from main at each iteration
+- Detects merged integration PRs and auto-cleans stale session files
+- Removed attempt to commit cleanup to main (which would fail on protected branches)
+- Updated `atlas-integration-flow` skill with correct cleanup flow
+
 ## [1.12.1] - 2026-01-19
 
 ### Fixed
