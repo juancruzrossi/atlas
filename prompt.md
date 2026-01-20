@@ -47,7 +47,9 @@ Do NOT skip this step. Read files in parallel for efficiency.
      - SESSION_NAME = "atlas-$(date +%Y%m%d-%H%M%S)"
      - BASE_BRANCH = "integration/$SESSION_NAME"
      - git checkout -b $BASE_BRANCH && git push -u origin $BASE_BRANCH
-     - Create draft PR: gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME"
+     - **CRITICAL**: Create draft PR to main IMMEDIATELY after creating branch:
+       gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME" --body "..."
+     - Capture PR_NUMBER from gh pr create output
      - Save .claude/integration-session.json with session_name, branch, pr_number, status=active
      - git add .claude/ && git commit -m "chore: init integration session" && git push
 

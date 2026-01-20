@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-01-20
+
+### Fixed
+- Emphasized CRITICAL draft PR creation in integration flow algorithm
+- PR to main must be created IMMEDIATELY after creating integration branch
+
 ## [1.12.2] - 2026-01-19
 
 ### Fixed
