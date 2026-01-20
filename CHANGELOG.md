@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-01-20
+
 ### Added
 - Bash-verified pending task counter after each iteration (don't trust model's count)
 - Shows pending count in terminal and Telegram notifications
 - Logs pending count to activity.log
+
+### Fixed
+- **CRITICAL**: Atlas now returns to main branch on exit (COMPLETE or MAX_ITERATIONS)
+- Prevents leaving user on integration/feature branch after run completes
 
 ### Changed
 - CLAUDE.md: Added mandatory development workflow (branch → PR → merge)
