@@ -30,13 +30,22 @@ Do NOT skip this step. Read files in parallel for efficiency.
 
 ```
 0. IF GIT_MODE=true:
-   - IF .claude/integration-session.json exists AND status=active:
-     - BASE_BRANCH = read 'branch' from JSON (e.g. integration/xxx)
-     - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
-   - ELSE:
+   - FIRST: git checkout main && git pull origin main  ← ALWAYS start from main
+   - IF .claude/integration-session.json exists:
+     - PR_NUMBER = read 'pr_number' from JSON
+     - PR_STATE = gh pr view $PR_NUMBER --json state -q '.state'
+     - IF PR_STATE="MERGED":
+       - Delete local integration branch: git branch -D integration/... (ignore errors)
+       - Delete session file locally: rm .claude/integration-session.json
+       - (NO commit - main is likely protected; new session will have its own JSON)
+       → Continue to create new session below
+     - ELSE (PR still open):
+       - BASE_BRANCH = read 'branch' from JSON
+       - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
+       → Skip to step 1
+   - Create new session (no session file OR session was cleaned up):
      - SESSION_NAME = "atlas-$(date +%Y%m%d-%H%M%S)"
      - BASE_BRANCH = "integration/$SESSION_NAME"
-     - git checkout main && git pull origin main
      - git checkout -b $BASE_BRANCH && git push -u origin $BASE_BRANCH
      - Create draft PR: gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME"
      - Save .claude/integration-session.json with session_name, branch, pr_number, status=active
@@ -172,7 +181,7 @@ If TODO and IN_PROGRESS are both empty:
 - READ context files BEFORE starting
 - WRITE to progress.txt and guardrails.md AFTER completing
 - IF GIT_MODE=true: commit and push state changes immediately
-- IF GIT_MODE=true: always end on $BASE_BRANCH (integration branch, NOT main)
+- IF GIT_MODE=true: during iteration, work on $BASE_BRANCH (not main); step 0 handles branch setup
 - IF GIT_MODE=true: all PRs go to integration branch, NEVER to main
 - ALWAYS print summary at the end
 
