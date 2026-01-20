@@ -419,12 +419,14 @@ Pending: $TODO_COUNT"
     if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
         echo ""; echo "✅ ALL TASKS COMPLETED!"
         log_activity "RUN COMPLETE run=$RUN_TAG"
+        [[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
         exit 0
     fi
 
     sleep 2
 done
 
+[[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
 echo ""; echo "🤖 MAX ITERATIONS REACHED"
 log_activity "RUN END run=$RUN_TAG (max iterations)"
 exit 0
