@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.5] - 2026-01-20
+
+### Fixed
+- **CRITICAL**: prompt.md had `.claude/integration-session.json` paths instead of `.atlas/` (agent would look in wrong location)
+- Removed dead code: `CLAUDE_PID` was never assigned but cleanup tried to use it
+- Cleanup now returns to main branch on Ctrl+C interrupt
+- Simplified AWK command for better portability across awk implementations
+- Made `notify-telegram.sh` executable in repo (was missing +x)
+
+### Changed
+- Unified `progress.txt` template format to match prompt.md documentation
+- Updated README to reflect integration branch workflow (PRs go to integration, not main)
+
 ## [1.15.4] - 2026-01-20
 
 ### Fixed
