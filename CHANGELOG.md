@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.6] - 2026-01-20
+
+### Fixed
+- **install.sh**: Now installs to `~/.atlas` (was `~/.local/bin`) - fixes "templates not found" on fresh install
+- **atlas.sh**: Auto-detect default branch (main/master) instead of hardcoding `main` - supports repos with `master` or custom default
+- **atlas.sh**: Check for `jq` before using it to avoid crash when not installed
+- **atlas.sh**: Proper whitespace trim for spec paths (was removing all spaces, breaking paths with spaces)
+- **notify-telegram.sh**: Guard against division by zero in progress bar
+
+### Added
+- New env var `ATLAS_DEFAULT_BRANCH` to override auto-detection
+
 ## [1.15.5] - 2026-01-20
 
 ### Fixed
