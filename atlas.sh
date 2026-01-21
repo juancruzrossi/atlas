@@ -276,9 +276,39 @@ if [[ -d "$PROJECT_DIR/.git" ]]; then
     # CRITICAL: Always start from default branch to ensure clean state
     echo "📍 Ensuring clean git state..."
     CURRENT_BRANCH=$(git branch --show-current)
-    if [[ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]]; then
+
+    # Handle empty repo (no commits yet) - skip branch switching
+    if [[ -z "$CURRENT_BRANCH" ]] && ! git rev-parse HEAD &>/dev/null; then
+        echo "   ⚠️  New repository with no commits yet - skipping branch check"
+    elif [[ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]]; then
         echo "   Switching from '$CURRENT_BRANCH' to $DEFAULT_BRANCH..."
-        git checkout "$DEFAULT_BRANCH" 2>/dev/null || { echo "❌ Failed to checkout $DEFAULT_BRANCH"; exit 1; }
+
+        # Check for uncommitted changes that would block checkout
+        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+            echo "❌ Cannot switch branches: you have uncommitted changes"
+            echo "   Please commit or stash your changes first:"
+            git status --short
+            exit 1
+        fi
+
+        # Try checkout, showing the actual error if it fails
+        if ! git checkout "$DEFAULT_BRANCH" 2>&1; then
+            # Branch might not exist locally - try to create from remote
+            if git show-ref --verify --quiet "refs/remotes/origin/$DEFAULT_BRANCH" 2>/dev/null; then
+                echo "   Creating local branch from origin/$DEFAULT_BRANCH..."
+                git checkout -b "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" || {
+                    echo "❌ Failed to create local branch $DEFAULT_BRANCH"
+                    exit 1
+                }
+            else
+                echo "❌ Branch '$DEFAULT_BRANCH' does not exist locally or on remote"
+                echo "   Available branches:"
+                git branch -a
+                echo ""
+                echo "   Hint: Set ATLAS_DEFAULT_BRANCH to your main branch name, or create the branch first"
+                exit 1
+            fi
+        fi
     fi
     git pull origin "$DEFAULT_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
 
