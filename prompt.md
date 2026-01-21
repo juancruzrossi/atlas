@@ -128,14 +128,16 @@ semgrep scan --config auto --error --severity ERROR
 
 ## Error Handling
 
-If build/test fails or task is blocked:
-1. Move task to DELAYED with reason in backlog.md
+If build/test fails:
+1. Move task back to TODO (will retry next iteration)
 2. Append to errors.log (see format below)
 3. Add Sign to guardrails.md if you learned something preventable
 4. IF GIT_MODE=true:
-   - git add .atlas/ && git commit -m "chore: delay [TASK_ID]" && git push
+   - git add .atlas/ && git commit -m "chore: error [TASK_ID]" && git push
    - Discard feature branch: git checkout $BASE_BRANCH && git branch -D [feature-branch]
 5. Go to step 8
+
+**Note:** DELAYED is only for tasks explicitly postponed by decision, not for errors.
 
 ## File Formats
 

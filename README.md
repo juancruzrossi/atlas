@@ -104,7 +104,7 @@ for each iteration:
     6. [git] Create PR → merge (squash) to integration branch
     7. Move to DONE [git: + commit]
     8. Write to progress.txt and guardrails.md
-    9. If error → move to DELAYED
+    9. If error → log to errors.log, move back to TODO
    10. If no tasks → exit loop
 ```
 
