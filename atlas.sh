@@ -33,6 +33,19 @@ case "${1:-}" in
         [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Created: guardrails.md"
         [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Created: activity.log"
         [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Created: errors.log"
+        # Create .gitignore to exclude session logs (they're local debugging, not code)
+        if [[ ! -f "$ATLAS_DIR/.gitignore" ]]; then
+            cat > "$ATLAS_DIR/.gitignore" << 'GITIGNORE'
+# Atlas session logs (local debugging files)
+activity.log
+errors.log
+runs/
+
+# Keep integration session tracked (needed for PR workflow)
+!integration-session.json
+GITIGNORE
+            echo "  Created: .gitignore"
+        fi
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
 
         # Install Atlas skills to ~/.claude/skills/
