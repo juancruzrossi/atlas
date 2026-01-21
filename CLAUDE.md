@@ -69,6 +69,7 @@ This is a pure bash project. No build step required.
 - `ATLAS_MAX_ITERATIONS` - Max iterations per run (default: 25)
 - `ATLAS_TIMEOUT` - Timeout per iteration in seconds (default: 1200)
 - `ATLAS_STALE_SECONDS` - Reset stuck tasks after N seconds (default: 7200)
+- `ATLAS_DEFAULT_BRANCH` - Override auto-detected default branch (default: auto)
 - `ATLAS_NOTIFY_TELEGRAM` - Enable Telegram notifications (default: true)
 
 ## Conventions

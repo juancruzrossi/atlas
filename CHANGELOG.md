@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.7] - 2026-01-20
+
+### Added
+- Document `ATLAS_DEFAULT_BRANCH` env var in README and CLAUDE.md
+
 ## [1.15.6] - 2026-01-20
 
 ### Fixed
