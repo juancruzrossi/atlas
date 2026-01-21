@@ -84,6 +84,7 @@ Override defaults with `ATLAS_` environment variables:
 export ATLAS_MAX_ITERATIONS=25      # Max iterations per run
 export ATLAS_TIMEOUT=1200           # Timeout per iteration (seconds)
 export ATLAS_STALE_SECONDS=7200     # Reset stuck tasks (seconds, 0 to disable)
+export ATLAS_DEFAULT_BRANCH=main    # Override auto-detected default branch
 export ATLAS_NOTIFY_TELEGRAM=true   # Enable Telegram notifications
 export ATLAS_TELEGRAM_BOT="token"   # Telegram bot token
 export ATLAS_TELEGRAM_CHAT="id"     # Telegram chat ID
