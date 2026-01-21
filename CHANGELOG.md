@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.2] - 2026-01-21
+
+### Added
+- `atlas init` now creates `.atlas/.gitignore` to exclude session logs from git tracking
+- Logs (`activity.log`, `errors.log`, `runs/`) stay local for debugging, won't appear as uncommitted changes
+
 ## [1.16.1] - 2026-01-21
 
 ### Fixed
