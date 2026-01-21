@@ -244,7 +244,7 @@ cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
-    [[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
+    [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
     exit 130
 }
 trap cleanup SIGINT SIGTERM
@@ -266,17 +266,24 @@ reset_stale_tasks
 if [[ -d "$PROJECT_DIR/.git" ]]; then
     export GIT_MODE="true"
 
-    # CRITICAL: Always start from main to ensure clean state
+    # Detect default branch (main, master, or configured)
+    export DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
+    if [[ -z "$DEFAULT_BRANCH" ]]; then
+        DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
+        [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH="main"
+    fi
+
+    # CRITICAL: Always start from default branch to ensure clean state
     echo "📍 Ensuring clean git state..."
     CURRENT_BRANCH=$(git branch --show-current)
-    if [[ "$CURRENT_BRANCH" != "main" ]]; then
-        echo "   Switching from '$CURRENT_BRANCH' to main..."
-        git checkout main 2>/dev/null || { echo "❌ Failed to checkout main"; exit 1; }
+    if [[ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]]; then
+        echo "   Switching from '$CURRENT_BRANCH' to $DEFAULT_BRANCH..."
+        git checkout "$DEFAULT_BRANCH" 2>/dev/null || { echo "❌ Failed to checkout $DEFAULT_BRANCH"; exit 1; }
     fi
-    git pull origin main 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
+    git pull origin "$DEFAULT_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
 
     # Check for merged integration session and cleanup
-    if [[ -f ".atlas/integration-session.json" ]]; then
+    if [[ -f ".atlas/integration-session.json" ]] && command -v jq &>/dev/null; then
         SESSION_PR=$(jq -r '.pr_number' .atlas/integration-session.json 2>/dev/null)
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
             PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
@@ -343,7 +350,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
     # Extract spec from the current task block only
     if [[ -n "$CURRENT_TASK_BLOCK" ]]; then
-        CURRENT_TASK_SPEC=$(echo "$CURRENT_TASK_BLOCK" | grep "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | tr -d ' ')
+        CURRENT_TASK_SPEC=$(echo "$CURRENT_TASK_BLOCK" | grep "^\- \*\*Spec:\*\*" | sed 's/.*Spec:\*\* //' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     fi
 
     if [[ -n "$CURRENT_TASK_SPEC" && -f "$CURRENT_TASK_SPEC" ]]; then
@@ -469,14 +476,14 @@ Pending: $TODO_COUNT"
     if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
         echo ""; echo "✅ ALL TASKS COMPLETED!"
         log_activity "RUN COMPLETE run=$RUN_TAG"
-        [[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
+        [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
         exit 0
     fi
 
     sleep 2
 done
 
-[[ "$GIT_MODE" == "true" ]] && git checkout main 2>/dev/null || true
+[[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
 echo ""; echo "🤖 MAX ITERATIONS REACHED"
 log_activity "RUN END run=$RUN_TAG (max iterations)"
 exit 0
