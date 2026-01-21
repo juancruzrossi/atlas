@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-01-21
+
+### Fixed
+- Git checkout now shows actual error message instead of generic "Failed to checkout"
+- Handle uncommitted changes gracefully with clear message and status output
+- Handle repos without local default branch (creates from remote if available)
+- Handle new repos with no commits yet (skips branch check entirely)
+
 ## [1.16.0] - 2026-01-21
 
 ### Added
