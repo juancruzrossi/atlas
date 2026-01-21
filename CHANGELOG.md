@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.8] - 2026-01-20
+
+### Fixed
+- Error handling: failed tasks now return to TODO (retry), not DELAYED
+- DELAYED section is only for tasks explicitly postponed by decision
+
 ## [1.15.7] - 2026-01-20
 
 ### Added
