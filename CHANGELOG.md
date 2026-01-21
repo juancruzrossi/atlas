@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-01-21
+
+### Added
+- New skill `write-backlog-tasks` for structured task creation in backlog
+- Interview-driven process: gathers requirements, explores codebase, defines scope
+- Includes task template, priority guidelines, and anti-patterns to avoid
+
 ## [1.15.8] - 2026-01-20
 
 ### Fixed
