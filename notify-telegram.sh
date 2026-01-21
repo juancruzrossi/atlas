@@ -24,6 +24,7 @@ SUMMARY="$4"
 progress_bar() {
     local current=$1
     local max=$2
+    [[ $max -le 0 ]] && max=1
     local filled=$((current * 10 / max))
     local empty=$((10 - filled))
     local bar=""
