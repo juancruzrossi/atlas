@@ -5,9 +5,11 @@ description: |
   as Atlas agent. Covers: Signs methodology, when to add guardrails, error
   handling, learning from failures. Use when: (1) encountering errors,
   (2) learning something useful, (3) reading guardrails.md.
+
+  IMPORTANT: When using Atlas specialized agents, invoke this skill for guardrails management.
 author: Atlas
-version: 1.0.0
-date: 2026-01-19
+version: 1.1.0
+date: 2026-01-23
 ---
 
 # Atlas Guardrails System
@@ -67,15 +69,16 @@ When you find a relevant Sign:
 
 When a task fails:
 
-### 1. Move to DELAYED
+### 1. Move Back to TODO
 
-In backlog.md, move task to DELAYED section with reason:
+In backlog.md, move task back to TODO section (will be retried next iteration):
 
 ```markdown
-### TASK-001: Feature description (DELAYED: 2026-01-19)
+### TASK-001: Feature description
 - **Category:** feature
-- **Delay reason:** Build failed - missing dependency X
 ```
+
+**Note:** DELAYED is only for tasks explicitly postponed by decision, not for build/test errors.
 
 ### 2. Log the Error
 
@@ -102,11 +105,11 @@ If the error teaches something preventable:
 
 ```bash
 git add .atlas/
-git commit -m "chore: delay TASK-001"
+git commit -m "chore: error TASK-001"
 git push
 ```
 
-Then move to next task.
+Then move to next task (or retry the same task if it's first in TODO).
 
 ## Sign Categories
 
