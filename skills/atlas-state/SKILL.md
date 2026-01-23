@@ -5,9 +5,14 @@ description: |
   as Atlas agent. Covers: backlog.md structure, progress.txt format,
   errors.log format, activity.log. Use when: (1) moving tasks between states,
   (2) logging progress, (3) recording errors.
+
+  CRITICAL: Only ONE task can be in IN_PROGRESS at a time. Tasks start in TODO,
+  move to IN_PROGRESS when work begins, then to DONE when complete.
+
+  IMPORTANT: When using Atlas specialized agents, invoke this skill for state management.
 author: Atlas
-version: 1.0.0
-date: 2026-01-19
+version: 1.1.0
+date: 2026-01-23
 ---
 
 # Atlas State Management
@@ -97,7 +102,11 @@ All state files live in `.atlas/` directory:
 2. If no task in IN_PROGRESS → pick FIRST task from TODO
 3. If TODO and IN_PROGRESS empty → session complete
 
-**NEVER skip tasks. ALWAYS pick the first one.**
+**CRITICAL RULES:**
+- **ONLY ONE** task can be in IN_PROGRESS at any time
+- **NEVER** move multiple tasks to IN_PROGRESS
+- **NEVER** skip tasks - ALWAYS pick the first one from TODO
+- Tasks flow: TODO → IN_PROGRESS → DONE (one at a time)
 
 ## progress.txt Format
 

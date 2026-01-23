@@ -47,14 +47,14 @@ Do NOT skip this step. Read files in parallel for efficiency.
      - SESSION_NAME = "atlas-$(date +%Y%m%d-%H%M%S)"
      - BASE_BRANCH = "integration/$SESSION_NAME"
      - git checkout -b $BASE_BRANCH && git push -u origin $BASE_BRANCH
-     - **CRITICAL**: Create draft PR to main IMMEDIATELY after creating branch:
-       gh pr create --draft --base main --title "🔄 Integration: $SESSION_NAME" --body "..."
+     - **CRITICAL**: Create PR to main IMMEDIATELY after creating branch (Ready for Review, NOT draft):
+       gh pr create --base main --title "🔄 Integration: $SESSION_NAME" --body "..."
      - Capture PR_NUMBER from gh pr create output
      - Save .atlas/integration-session.json with session_name, branch, pr_number, status=active
      - git add .atlas/ && git commit -m "chore: init integration session" && git push
 
-1. IF task in IN_PROGRESS → continue it
-   ELSE IF task in TODO → pick FIRST one
+1. IF task in IN_PROGRESS → continue it (ONLY ONE task can be in IN_PROGRESS at a time)
+   ELSE IF task in TODO → pick FIRST one (do NOT move multiple tasks)
    ELSE → go to step 8
 
 2. IF starting new task:
@@ -182,6 +182,8 @@ If TODO and IN_PROGRESS are both empty:
 ## Rules
 
 - ONE task per iteration
+- ONLY ONE task in IN_PROGRESS at any time - NEVER move multiple tasks to IN_PROGRESS
+- Tasks start in TODO → move to IN_PROGRESS only when starting work → move to DONE when complete
 - READ context files BEFORE starting
 - WRITE to progress.txt and guardrails.md AFTER completing
 - IF GIT_MODE=true: commit and push state changes immediately
