@@ -4,11 +4,13 @@ description: |
   Integration branch workflow for Atlas autonomous sessions. ONLY use when
   running as Atlas agent (detected by GIT_MODE=true in prompt context).
   Handles: creating integration branch, PR workflow to integration,
-  draft PR to main. Use when: (1) starting Atlas session with git,
+  PR to main (Ready for Review). Use when: (1) starting Atlas session with git,
   (2) creating PRs during Atlas run, (3) completing Atlas session.
+
+  IMPORTANT: When using Atlas specialized agents, invoke this skill for git operations.
 author: Atlas
-version: 1.0.0
-date: 2026-01-19
+version: 1.1.0
+date: 2026-01-23
 ---
 
 # Atlas Integration Branch Flow
@@ -22,7 +24,7 @@ All Atlas work goes to an integration branch, NOT directly to main. This allows 
 ```
 main (protected)
   │
-  └── integration/atlas-YYYYMMDD-HHMMSS  ← Draft PR to main (NO merge until review)
+  └── integration/atlas-YYYYMMDD-HHMMSS  ← PR to main (Ready for Review, NO merge until review)
         │
         ├── feature/TASK-001  → PR to integration ✓ merged
         ├── feature/TASK-002  → PR to integration ✓ merged
@@ -70,8 +72,8 @@ BASE_BRANCH="integration/$SESSION_NAME"
 git checkout -b "$BASE_BRANCH"
 git push -u origin "$BASE_BRANCH"
 
-# 3. Create draft PR to main (REQUIRED)
-PR_URL=$(gh pr create --draft --base main \
+# 3. Create PR to main - Ready for Review, NOT draft (REQUIRED)
+PR_URL=$(gh pr create --base main \
   --title "🔄 Integration: $SESSION_NAME" \
   --body "## Integration Branch
 
@@ -155,11 +157,10 @@ git pull origin "$BASE_BRANCH"
 
 ## End of Session
 
-The integration branch stays with draft PR open to main. Human reviews and merges when ready.
+The integration branch stays with PR open to main (Ready for Review). Human reviews and merges when ready.
 
 **DO NOT**:
 - Merge integration PR to main automatically
-- Mark integration PR as ready automatically
 - Delete integration branch before human review
 
 ## Session File Format

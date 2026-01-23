@@ -5,9 +5,11 @@ description: |
   as Atlas agent. Covers: branch naming, conventional commits, PR workflow,
   squash merge strategy. Use when: (1) creating branches, (2) writing commits,
   (3) creating PRs, (4) merging PRs.
+
+  IMPORTANT: When using Atlas specialized agents, invoke this skill for branching conventions.
 author: Atlas
-version: 1.0.0
-date: 2026-01-19
+version: 1.1.0
+date: 2026-01-23
 ---
 
 # Atlas Branching Conventions

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.3] - 2026-01-23
+
+### Fixed
+- **Integration PR now Ready for Review** instead of Draft - allows immediate review when ready
+- **Task movement rules enforced**: Only ONE task can be in IN_PROGRESS at a time
+- Tasks must stay in TODO until work begins, then move to IN_PROGRESS one at a time
+- Corrected atlas-guardrails skill: errors move to TODO (retry), not DELAYED
+
+### Changed
+- All Atlas skills updated to v1.1.0 with clearer invocation guidance
+- Skills now explicitly document they should be invoked by Atlas specialized agents
+
 ## [1.16.2] - 2026-01-21
 
 ### Added
