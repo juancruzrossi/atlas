@@ -117,9 +117,9 @@ GITIGNORE
         ;;
     plan)
         shift
-        FEATURE_PROMPT="${1:-}"
+        FEATURE_PROMPT="$*"
 
-        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan \"feature description\""; exit 1; }
+        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
         mkdir -p "$ATLAS_DIR/specs"
@@ -150,7 +150,7 @@ GITIGNORE
         echo ""
         echo "Usage: atlas [iterations]"
         echo "       atlas init         - Initialize .atlas/ in current project"
-        echo "       atlas plan \"...\"   - Interview and plan a feature"
+        echo "       atlas plan <description> - Interview and plan a feature"
         echo "       atlas update       - Update Atlas from GitHub (preserves your data)"
         echo "       atlas 25           - Run 25 iterations"
         echo ""
