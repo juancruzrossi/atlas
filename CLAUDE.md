@@ -71,6 +71,29 @@ This is a pure bash project. No build step required.
 - `ATLAS_STALE_SECONDS` - Reset stuck tasks after N seconds (default: 7200)
 - `ATLAS_DEFAULT_BRANCH` - Override auto-detected default branch (default: auto)
 - `ATLAS_NOTIFY_TELEGRAM` - Enable Telegram notifications (default: true)
+- `ATLAS_CLI` - AI provider: claudecode (default) | opencode
+
+## AI Provider Support
+
+Atlas now supports multiple AI providers:
+
+- **Claude Code** (claudecode) - Default, best for interactive `atlas plan`
+- **OpenCode** (opencode) - Alternative for autonomous execution
+
+### Implementation Details
+
+The provider is selected via (in order of priority):
+1. `--cli <provider>` flag
+2. `ATLAS_CLI` environment variable
+3. Default: claudecode
+
+### Code Changes
+
+When modifying provider-related code:
+- Maintain backward compatibility (default remains claudecode)
+- Skills are installed to both `~/.claude/skills/` and `~/.config/opencode/skills/`
+- Validation happens early (fails fast if selected CLI not installed)
+- Use conditional invocation based on `ATLAS_CLI` variable
 
 ## Conventions
 

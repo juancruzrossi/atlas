@@ -27,11 +27,12 @@ for f in CONTEXT_ENGINEERING.md GUARDRAILS.md; do
 done
 
 SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
-mkdir -p "${HOME}/.claude/skills"
+mkdir -p "${HOME}/.claude/skills" "${HOME}/.config/opencode/skills"
 for skill in $SKILLS; do
-    mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
+    mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
     curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
     if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
+    if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
 done
 
 rm -f "$BIN_DIR/atlas"

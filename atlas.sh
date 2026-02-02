@@ -6,6 +6,45 @@ PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
+# Atlas version
+ATLAS_VERSION="2.0.0"
+
+# AI Provider configuration (claudecode | opencode)
+# Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
+ATLAS_CLI="${ATLAS_CLI:-claudecode}"
+
+# Parse command line arguments for --cli flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --cli)
+            shift
+            if [[ -n "$1" && "$1" != -* ]]; then
+                if [[ "$1" == "claudecode" || "$1" == "opencode" ]]; then
+                    ATLAS_CLI="$1"
+                else
+                    echo "Error: --cli requires 'claudecode' or 'opencode', got '$1'"
+                    exit 1
+                fi
+                shift
+            else
+                echo "Error: --cli requires an argument (claudecode or opencode)"
+                exit 1
+            fi
+            ;;
+        --version|-v)
+            echo "Atlas v$ATLAS_VERSION"
+            exit 0
+            ;;
+        --help|-h)
+            # Will be handled in case statement
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 DEFAULT_MAX_ITERATIONS=25
 DEFAULT_STALE_SECONDS=7200
 DEFAULT_TIMEOUT=1200
@@ -70,8 +109,9 @@ GITIGNORE
         fi
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
 
-        # Install Atlas skills to ~/.claude/skills/
+        # Install Atlas skills to both Claude Code and OpenCode
         if [[ -d "$ATLAS_HOME/skills" ]]; then
+            # Install to Claude Code
             mkdir -p "${HOME}/.claude/skills"
             for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
                 skill_name=$(basename "$skill_dir")
@@ -79,6 +119,15 @@ GITIGNORE
                 cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
             done
             echo "  Installed: Atlas skills to ~/.claude/skills/"
+            
+            # Install to OpenCode
+            mkdir -p "${HOME}/.config/opencode/skills"
+            for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                skill_name=$(basename "$skill_dir")
+                mkdir -p "${HOME}/.config/opencode/skills/$skill_name"
+                cp -r "$skill_dir"/* "${HOME}/.config/opencode/skills/$skill_name/" 2>/dev/null || true
+            done
+            echo "  Installed: Atlas skills to ~/.config/opencode/skills/"
         fi
 
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
@@ -104,11 +153,20 @@ GITIGNORE
         for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true; done
 
         SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
+        
+        # Install to Claude Code
         mkdir -p "${HOME}/.claude/skills"
         for skill in $SKILLS; do
             mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
             curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
             if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
+        done
+        
+        # Install to OpenCode
+        mkdir -p "${HOME}/.config/opencode/skills"
+        for skill in $SKILLS; do
+            mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
+            if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
         done
 
         ATLAS_BIN=$(which atlas 2>/dev/null || true)
@@ -163,27 +221,66 @@ GITIGNORE
 
         # Interactive mode (no -p) allows AskUserQuestionTool
         # --dangerously-skip-permissions avoids permission prompts
-        claude --dangerously-skip-permissions "$PLAN_PROMPT"
+        if [[ "$ATLAS_CLI" == "opencode" ]]; then
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            opencode run --agent plan "$PLAN_PROMPT"
+        else
+            claude --dangerously-skip-permissions "$PLAN_PROMPT"
+        fi
 
         exit 0
         ;;
     help|--help|-h)
-        echo "Atlas - Autonomous Task Loop Agent System"
+        echo "Atlas - Autonomous Task Loop Agent System v$ATLAS_VERSION"
         echo ""
-        echo "Usage: atlas [iterations]"
-        echo "       atlas init         - Initialize .atlas/ in current project"
-        echo "       atlas plan <description> - Interview and plan a feature"
-        echo "       atlas update       - Update Atlas from GitHub (preserves your data)"
-        echo "       atlas 25           - Run 25 iterations"
+        echo "Usage: atlas [options] [command]"
         echo ""
-        echo "Environment variables (all configurable):"
+        echo "Commands:"
+        echo "  atlas init                  Initialize .atlas/ in current project"
+        echo "  atlas plan <description>    Interview and plan a feature"
+        echo "  atlas update                Update Atlas from GitHub (preserves your data)"
+        echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
+        echo ""
+        echo "Options:"
+        echo "  --cli <provider>            AI provider: claudecode (default) | opencode"
+        echo "  --version, -v               Show version information"
+        echo "  --help, -h                  Show this help message"
+        echo ""
+        echo "Environment variables:"
+        echo "  ATLAS_CLI=claudecode        Default AI provider (claudecode | opencode)"
         echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
         echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
         echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
-        echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram notifications"
+        echo "  ATLAS_NOTIFY_TELEGRAM=true  Enable Telegram notifications"
         echo "  ATLAS_TELEGRAM_BOT=...      Telegram bot token"
         echo "  ATLAS_TELEGRAM_CHAT=...     Telegram chat ID"
+        echo ""
+        echo "Examples:"
+        echo "  atlas 25                              # Run with Claude Code (default)"
+        echo "  atlas --cli opencode 25               # Run with OpenCode"
+        echo "  ATLAS_CLI=opencode atlas 25           # Run with OpenCode (env var)"
+        echo "  atlas plan \"new feature\"              # Plan with Claude Code"
         exit 0
+        ;;
+esac
+
+# Validate that the selected AI CLI is installed
+case "$ATLAS_CLI" in
+    claudecode)
+        if ! command -v claude >/dev/null 2>&1; then
+            echo "❌ Error: Claude Code not found"
+            echo "   Install it: https://docs.anthropic.com/en/docs/claude-code"
+            echo "   Or use OpenCode: curl -fsSL https://opencode.ai/install | bash"
+            exit 1
+        fi
+        ;;
+    opencode)
+        if ! command -v opencode >/dev/null 2>&1; then
+            echo "❌ Error: OpenCode not found"
+            echo "   Install it: curl -fsSL https://opencode.ai/install | bash"
+            echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
+            exit 1
+        fi
         ;;
 esac
 
@@ -297,6 +394,7 @@ echo "╔═══════════════════════�
 echo "║  Atlas - Autonomous Task Loop Agent System            ║"
 echo "╠═══════════════════════════════════════════════════════╣"
 echo "║  Project: $PROJECT_NAME"
+echo "║  AI Provider: $ATLAS_CLI"
 echo "║  Iterations: $MAX_ITERATIONS"
 echo "║  Run: $RUN_TAG"
 echo "╚═══════════════════════════════════════════════════════╝"
@@ -464,8 +562,13 @@ $PROMPT_CONTENT"
     while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
         RETRY_COUNT=$((RETRY_COUNT + 1))
 
-        # Run claude and capture output
-        OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+        # Run AI CLI and capture output
+        if [[ "$ATLAS_CLI" == "opencode" ]]; then
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build --file "$PROMPT_FILE_TMP" 2>&1) || true
+        else
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+        fi
 
         # Check for CLI errors
         CLI_ERROR=""
