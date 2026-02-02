@@ -18,6 +18,28 @@ PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
 
+# Cross-platform timeout function
+run_with_timeout() {
+    local timeout_seconds=$1
+    shift
+
+    # Try GNU timeout (Linux)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout --foreground "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    # Try gtimeout (macOS with brew install coreutils)
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout --foreground "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    # Fallback: run without timeout (macOS without coreutils)
+    "$@"
+    return $?
+}
+
 case "${1:-}" in
     init)
         mkdir -p "$ATLAS_DIR" "$RUNS_DIR"
@@ -443,7 +465,7 @@ $PROMPT_CONTENT"
         RETRY_COUNT=$((RETRY_COUNT + 1))
 
         # Run claude and capture output
-        OUTPUT=$(timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+        OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
 
         # Check for CLI errors
         CLI_ERROR=""
