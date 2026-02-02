@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-02-02
+
+### Added
+- **`atlas plan` now accepts args without quotes** - Both `atlas plan foo bar` and `atlas plan "foo bar"` work
+
+### Fixed
+- **plan_prompt.md deletion on case-insensitive filesystems** - macOS users can now run `atlas update` without breaking `atlas plan`
+- Download validation in `atlas update` and `install.sh` - clearer error messages when downloads fail
+
+### Changed
+- Removed unnecessary comments from `atlas.sh` and `install.sh` for cleaner code
+
 ## [1.16.3] - 2026-01-23
 
 ### Fixed
