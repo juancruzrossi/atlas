@@ -68,16 +68,26 @@ GITIGNORE
         # Get current version (skip Unreleased, find first X.Y.Z)
         OLD_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
 
-        # Download all files silently
+        echo "Updating Atlas..."
         mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills"
-        curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
-        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
-        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md"
-        rm -f "$ATLAS_HOME/PLAN_PROMPT.md"  # Remove old file if exists
-        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md"
-        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
-        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null; done
-        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null; done
+
+        # Download atlas.sh to temp file first (avoid self-overwrite mid-execution)
+        TEMP_ATLAS=$(mktemp)
+        curl -fsSL "$REPO_URL/atlas.sh" -o "$TEMP_ATLAS" || true
+
+        # Download other core files
+        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
+        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
+        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
+        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
+
+        # Move atlas.sh into place after all other downloads complete
+        if [[ -s "$TEMP_ATLAS" ]]; then mv "$TEMP_ATLAS" "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"; else rm -f "$TEMP_ATLAS"; fi
+        # Note: removed legacy PLAN_PROMPT.md cleanup (macOS case-insensitive FS deletes plan_prompt.md)
+
+        # Download templates and references (non-critical)
+        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null || true; done
+        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true; done
 
         # Download and install Atlas skills
         SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
@@ -85,12 +95,27 @@ GITIGNORE
         for skill in $SKILLS; do
             mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
             curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-            [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]] && cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"
+            if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
         done
 
         # Update binary in PATH if needed
-        ATLAS_BIN=$(which atlas 2>/dev/null)
-        [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]] && cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"
+        ATLAS_BIN=$(which atlas 2>/dev/null || true)
+        if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
+
+        # Validate critical files exist
+        MISSING=()
+        for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
+            if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
+        done
+
+        if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo ""
+            echo "✗ Error: Failed to download critical file(s):"
+            for f in "${MISSING[@]}"; do echo "  - $f"; done
+            echo ""
+            echo "Check your internet connection and try again."
+            exit 1
+        fi
 
         # Get new version (skip Unreleased, find first X.Y.Z)
         NEW_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
@@ -100,7 +125,6 @@ GITIGNORE
         else
             echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
         fi
-        echo "✓ Skills installed to ~/.claude/skills/"
         exit 0
         ;;
     plan)

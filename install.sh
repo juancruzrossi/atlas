@@ -12,12 +12,12 @@ echo "  Binary: $BIN_DIR/atlas"
 # Create directories
 mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills" "$BIN_DIR"
 
-# Download core files to ATLAS_HOME
-curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
-curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
-curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md"
-curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
-curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md"
+# Download core files (|| true prevents set -e from killing the script)
+curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh" || true
+curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
+curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
+curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
+curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
 
 # Download templates
 for f in backlog.md progress.txt guardrails.md; do
@@ -35,12 +35,27 @@ mkdir -p "${HOME}/.claude/skills"
 for skill in $SKILLS; do
     mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
     curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-    [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]] && cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"
+    if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
 done
 
 # Create symlink or copy binary to PATH
 rm -f "$BIN_DIR/atlas"
 ln -s "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas" 2>/dev/null || cp "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas"
+
+# Validate critical files exist
+MISSING=()
+for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
+    if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
+done
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+    echo ""
+    echo "✗ Error: Installation failed - missing critical file(s):"
+    for f in "${MISSING[@]}"; do echo "  - $f"; done
+    echo ""
+    echo "Check your internet connection and try again."
+    exit 1
+fi
 
 echo ""
 echo "✓ Atlas installed!"
