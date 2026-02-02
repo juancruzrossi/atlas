@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-provider AI support** - Atlas now supports both Claude Code and OpenCode
 - **`--cli <provider>` flag** - Switch AI provider per command (claudecode | opencode)
 - **`ATLAS_CLI` environment variable** - Set default provider for all sessions
-- **Skills installation to OpenCode** - Atlas skills now installed to both `~/.claude/skills/` and `~/.config/opencode/skills/`
+- **Skills installation to OpenCode** - Atlas skills now installed to both `~/.claude/skills/` and `~/.config/opencode/skills/` (via `atlas init`, `atlas update`, and `install.sh`)
 - **Provider validation** - Clear error messages if selected CLI is not installed, with installation instructions
 - **Version flag** - `atlas --version` now displays current version (2.0.0)
 - **Provider display** - Header now shows which AI provider is being used

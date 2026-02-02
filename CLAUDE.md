@@ -24,7 +24,7 @@ references/         Documentation about context engineering and guardrails
 
 **Core loop** (`atlas.sh`):
 1. Builds prompt with all context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
-2. Invokes `claude --dangerously-skip-permissions -p` with the prompt
+2. Invokes the selected AI provider (claudecode or opencode) with the prompt
 3. Parses output for `<promise>COMPLETE</promise>` to exit early
 4. Logs iteration to `$RUNS_DIR` and optionally notifies Telegram
 

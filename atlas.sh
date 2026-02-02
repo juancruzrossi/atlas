@@ -109,25 +109,29 @@ GITIGNORE
         fi
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
 
-        # Install Atlas skills to both Claude Code and OpenCode
+        # Install Atlas skills to available AI providers only
         if [[ -d "$ATLAS_HOME/skills" ]]; then
-            # Install to Claude Code
-            mkdir -p "${HOME}/.claude/skills"
-            for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                skill_name=$(basename "$skill_dir")
-                mkdir -p "${HOME}/.claude/skills/$skill_name"
-                cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
-            done
-            echo "  Installed: Atlas skills to ~/.claude/skills/"
+            # Install to Claude Code if available
+            if command -v claude >/dev/null 2>&1; then
+                mkdir -p "${HOME}/.claude/skills"
+                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                    skill_name=$(basename "$skill_dir")
+                    mkdir -p "${HOME}/.claude/skills/$skill_name"
+                    cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
+                done
+                echo "  Installed: Atlas skills to ~/.claude/skills/"
+            fi
             
-            # Install to OpenCode
-            mkdir -p "${HOME}/.config/opencode/skills"
-            for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                skill_name=$(basename "$skill_dir")
-                mkdir -p "${HOME}/.config/opencode/skills/$skill_name"
-                cp -r "$skill_dir"/* "${HOME}/.config/opencode/skills/$skill_name/" 2>/dev/null || true
-            done
-            echo "  Installed: Atlas skills to ~/.config/opencode/skills/"
+            # Install to OpenCode if available
+            if command -v opencode >/dev/null 2>&1; then
+                mkdir -p "${HOME}/.config/opencode/skills"
+                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                    skill_name=$(basename "$skill_dir")
+                    mkdir -p "${HOME}/.config/opencode/skills/$skill_name"
+                    cp -r "$skill_dir"/* "${HOME}/.config/opencode/skills/$skill_name/" 2>/dev/null || true
+                done
+                echo "  Installed: Atlas skills to ~/.config/opencode/skills/"
+            fi
         fi
 
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
@@ -154,20 +158,24 @@ GITIGNORE
 
         SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
         
-        # Install to Claude Code
-        mkdir -p "${HOME}/.claude/skills"
-        for skill in $SKILLS; do
-            mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
-            curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-            if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
-        done
+        # Install to Claude Code if available
+        if command -v claude >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.claude/skills"
+            for skill in $SKILLS; do
+                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
+                curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
+            done
+        fi
         
-        # Install to OpenCode
-        mkdir -p "${HOME}/.config/opencode/skills"
-        for skill in $SKILLS; do
-            mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
-            if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
-        done
+        # Install to OpenCode if available
+        if command -v opencode >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.config/opencode/skills"
+            for skill in $SKILLS; do
+                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
+                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
+            done
+        fi
 
         ATLAS_BIN=$(which atlas 2>/dev/null || true)
         if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
