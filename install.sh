@@ -12,24 +12,20 @@ echo "  Binary: $BIN_DIR/atlas"
 # Create directories
 mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills" "$BIN_DIR"
 
-# Download core files (|| true prevents set -e from killing the script)
 curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh" || true
 curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
 curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
 curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
 curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
 
-# Download templates
 for f in backlog.md progress.txt guardrails.md; do
     curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null || true
 done
 
-# Download references
 for f in CONTEXT_ENGINEERING.md GUARDRAILS.md; do
     curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true
 done
 
-# Download and install Atlas skills
 SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
 mkdir -p "${HOME}/.claude/skills"
 for skill in $SKILLS; do
@@ -38,11 +34,9 @@ for skill in $SKILLS; do
     if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
 done
 
-# Create symlink or copy binary to PATH
 rm -f "$BIN_DIR/atlas"
 ln -s "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas" 2>/dev/null || cp "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas"
 
-# Validate critical files exist
 MISSING=()
 for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
     if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
