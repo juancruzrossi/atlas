@@ -27,12 +27,26 @@ for f in CONTEXT_ENGINEERING.md GUARDRAILS.md; do
 done
 
 SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
-mkdir -p "${HOME}/.claude/skills"
-for skill in $SKILLS; do
-    mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
-    curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-    if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
-done
+
+# Install to Claude Code if available
+if command -v claude >/dev/null 2>&1; then
+    mkdir -p "${HOME}/.claude/skills"
+    for skill in $SKILLS; do
+        mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
+        curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+        if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
+    done
+fi
+
+# Install to OpenCode if available
+if command -v opencode >/dev/null 2>&1; then
+    mkdir -p "${HOME}/.config/opencode/skills"
+    for skill in $SKILLS; do
+        mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
+        curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+        if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
+    done
+fi
 
 rm -f "$BIN_DIR/atlas"
 ln -s "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas" 2>/dev/null || cp "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas"
