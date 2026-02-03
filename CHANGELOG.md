@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-02-03
+
+### Fixed
+- **CRITICAL: Backlog update enforcement** - Tasks were being completed (PRs merged) but not moved to DONE in backlog.md, causing state drift
+- Step 7 (Finalize) now marked as CRITICAL with explicit verification requirement
+- Added "CRITICAL: Update Backlog After Merge" section to `atlas-integration-flow` skill
+- Added verification rules to `atlas-state` skill: must confirm task in DONE before starting next task
+- Root cause: Model was merging PRs but skipping the backlog update step, leaving completed tasks in TODO
+
 ## [2.0.1] - 2026-02-02
 
 ### Fixed
