@@ -573,7 +573,7 @@ $PROMPT_CONTENT"
         # Run AI CLI and capture output
         if [[ "$ATLAS_CLI" == "opencode" ]]; then
             export OPENCODE_PERMISSION='{"*":"allow"}'
-            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build --file "$PROMPT_FILE_TMP" 2>&1) || true
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
         else
             OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
         fi
