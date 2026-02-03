@@ -107,6 +107,9 @@ All state files live in `.atlas/` directory:
 - **NEVER** move multiple tasks to IN_PROGRESS
 - **NEVER** skip tasks - ALWAYS pick the first one from TODO
 - Tasks flow: TODO → IN_PROGRESS → DONE (one at a time)
+- **NEVER** proceed to next task without moving current task to DONE
+- **ALWAYS** update backlog.md IMMEDIATELY after merging PR
+- **VERIFY** task is in DONE section before starting new task
 
 ## progress.txt Format
 
