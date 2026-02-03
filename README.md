@@ -29,8 +29,26 @@ curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh
 
 ### Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default) **or** [OpenCode](https://opencode.ai) (alternative)
 - Git (optional - enables branches, PRs, and commits)
+
+### AI Provider Configuration
+
+Atlas supports multiple AI providers. By default, it uses Claude Code, but you can switch to OpenCode:
+
+```bash
+# Use Claude Code (default)
+atlas 25
+
+# Use OpenCode
+atlas --cli opencode 25
+
+# Or set environment variable (persists across sessions)
+export ATLAS_CLI=opencode
+atlas 25
+```
+
+**Recommendation**: Use Claude Code for `atlas plan` (interactive mode works best) and OpenCode for `atlas [N]` (autonomous execution).
 
 ---
 
@@ -54,6 +72,7 @@ atlas
 | `atlas init` | Initialize `.atlas/` in current project |
 | `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
+| `atlas --cli <provider> [N]` | Run with specific AI provider (claudecode \| opencode) |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |
 
@@ -81,6 +100,7 @@ atlas 5
 Override defaults with `ATLAS_` environment variables:
 
 ```bash
+export ATLAS_CLI=claudecode         # AI provider: claudecode (default) or opencode
 export ATLAS_MAX_ITERATIONS=25      # Max iterations per run
 export ATLAS_TIMEOUT=1200           # Timeout per iteration (seconds)
 export ATLAS_STALE_SECONDS=7200     # Reset stuck tasks (seconds, 0 to disable)
