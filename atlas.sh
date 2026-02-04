@@ -7,42 +7,63 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="2.3.0"
+ATLAS_VERSION="2.4.0"
 
 # AI Provider configuration (claudecode | opencode)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
 ATLAS_CLI="${ATLAS_CLI:-claudecode}"
 
-# Parse command line arguments for --cli flag
+SHOW_HELP=false
+SHOW_VERSION=false
+REVIEW_DRY_RUN=false
+CLEAN_ALL=false
+POSITIONAL_ARGS=()
+
+# Parse global flags from any position
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --cli)
-            shift
-            if [[ -n "$1" && "$1" != -* ]]; then
-                if [[ "$1" == "claudecode" || "$1" == "opencode" || "$1" == "codex" ]]; then
-                    ATLAS_CLI="$1"
-                else
-                    echo "Error: --cli requires 'claudecode', 'opencode', or 'codex', got '$1'"
-                    exit 1
-                fi
-                shift
-            else
+            if [[ $# -lt 2 ]]; then
                 echo "Error: --cli requires an argument (claudecode, opencode, or codex)"
                 exit 1
             fi
+            case "$2" in
+                claudecode|opencode|codex)
+                    ATLAS_CLI="$2"
+                    ;;
+                *)
+                    echo "Error: --cli requires 'claudecode', 'opencode', or 'codex', got '$2'"
+                    exit 1
+                    ;;
+            esac
+            shift 2
+            continue
+            ;;
+        --dry-run)
+            REVIEW_DRY_RUN=true
+            ;;
+        --all)
+            CLEAN_ALL=true
             ;;
         --version|-v)
-            echo "Atlas v$ATLAS_VERSION"
-            exit 0
+            SHOW_VERSION=true
             ;;
         --help|-h)
-            # Will be handled in case statement
+            SHOW_HELP=true
+            ;;
+        --)
+            shift
+            while [[ $# -gt 0 ]]; do
+                POSITIONAL_ARGS+=("$1")
+                shift
+            done
             break
             ;;
         *)
-            break
+            POSITIONAL_ARGS+=("$1")
             ;;
     esac
+    shift
 done
 
 DEFAULT_MAX_ITERATIONS=25
@@ -79,7 +100,79 @@ run_with_timeout() {
     return $?
 }
 
-case "${1:-}" in
+print_help() {
+    echo "Atlas - Autonomous Task Loop Agent System v$ATLAS_VERSION"
+    echo ""
+    echo "Usage: atlas [options] [command]"
+    echo ""
+    echo "Commands:"
+    echo "  atlas init                  Initialize .atlas/ in current project"
+    echo "  atlas plan <description>    Interview and plan a feature"
+    echo "  atlas review [--dry-run]    Audit issues (and optionally auto-fix)"
+    echo "  atlas resume [iterations]   Resume interrupted integration session"
+    echo "  atlas clean [--all]         Clean runtime artifacts from .atlas/"
+    echo "  atlas update                Update Atlas from GitHub (preserves your data)"
+    echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
+    echo ""
+    echo "Options:"
+    echo "  --cli <provider>            AI provider: claudecode (default) | opencode | codex"
+    echo "  --dry-run                   Review mode: report only (no auto-fixes)"
+    echo "  --all                       Clean mode: also reset activity/errors logs and session"
+    echo "  --version, -v               Show version information"
+    echo "  --help, -h                  Show this help message"
+    echo ""
+    echo "Environment variables:"
+    echo "  ATLAS_CLI=claudecode        Default AI provider (claudecode | opencode | codex)"
+    echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
+    echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
+    echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
+    echo "  ATLAS_NOTIFY_TELEGRAM=true  Enable Telegram notifications"
+    echo "  ATLAS_TELEGRAM_BOT=...      Telegram bot token"
+    echo "  ATLAS_TELEGRAM_CHAT=...     Telegram chat ID"
+    echo ""
+    echo "Examples:"
+    echo "  atlas 25                              # Run with Claude Code (default)"
+    echo "  atlas --cli opencode review           # Review with OpenCode"
+    echo "  atlas review --dry-run                # Report-only review"
+    echo "  atlas --cli codex 25                  # Run with Codex"
+    echo "  atlas clean                           # Remove .atlas/runs logs"
+    echo "  atlas clean --all                     # Reset logs + session metadata"
+}
+
+if [[ "$SHOW_VERSION" == "true" ]]; then
+    echo "Atlas v$ATLAS_VERSION"
+    exit 0
+fi
+
+COMMAND=""
+COMMAND_ARGS=()
+if [[ "$SHOW_HELP" == "true" ]]; then
+    COMMAND="help"
+elif [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]]; then
+    COMMAND="run"
+elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
+    COMMAND="${POSITIONAL_ARGS[0]}"
+    COMMAND_ARGS=("${POSITIONAL_ARGS[@]:1}")
+elif [[ "${POSITIONAL_ARGS[0]}" =~ ^[0-9]+$ ]]; then
+    COMMAND="run"
+    COMMAND_ARGS=("${POSITIONAL_ARGS[@]}")
+else
+    echo "Error: Unknown command '${POSITIONAL_ARGS[0]}'"
+    echo "Run 'atlas help' for usage"
+    exit 1
+fi
+
+if [[ "$REVIEW_DRY_RUN" == "true" && "$COMMAND" != "review" && "$COMMAND" != "help" ]]; then
+    echo "Error: --dry-run is only valid with 'atlas review'"
+    exit 1
+fi
+
+if [[ "$CLEAN_ALL" == "true" && "$COMMAND" != "clean" && "$COMMAND" != "help" ]]; then
+    echo "Error: --all is only valid with 'atlas clean'"
+    exit 1
+fi
+
+case "$COMMAND" in
     init)
         mkdir -p "$ATLAS_DIR" "$RUNS_DIR"
         if [[ ! -f "$BACKLOG_FILE" ]]; then
@@ -169,13 +262,16 @@ GITIGNORE
         for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true; done
 
         SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
+        for skill in $SKILLS; do
+            mkdir -p "$ATLAS_HOME/skills/$skill"
+            curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+        done
         
         # Install to Claude Code if available
         if command -v claude >/dev/null 2>&1; then
             mkdir -p "${HOME}/.claude/skills"
             for skill in $SKILLS; do
-                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
-                curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+                mkdir -p "${HOME}/.claude/skills/$skill"
                 if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
             done
         fi
@@ -184,7 +280,7 @@ GITIGNORE
         if command -v opencode >/dev/null 2>&1; then
             mkdir -p "${HOME}/.config/opencode/skills"
             for skill in $SKILLS; do
-                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
+                mkdir -p "${HOME}/.config/opencode/skills/$skill"
                 if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
             done
         fi
@@ -193,7 +289,7 @@ GITIGNORE
         if command -v codex >/dev/null 2>&1; then
             mkdir -p "${HOME}/.codex/skills"
             for skill in $SKILLS; do
-                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.codex/skills/$skill"
+                mkdir -p "${HOME}/.codex/skills/$skill"
                 if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.codex/skills/$skill/"; fi
             done
         fi
@@ -202,7 +298,7 @@ GITIGNORE
         if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
 
         MISSING=()
-        for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
+        for f in atlas.sh prompt.md plan_prompt.md review_prompt.md CHANGELOG.md; do
             if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
         done
 
@@ -225,10 +321,8 @@ GITIGNORE
         exit 0
         ;;
     plan)
-        shift
-        FEATURE_PROMPT="$*"
-
-        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
+        FEATURE_PROMPT="${COMMAND_ARGS[*]}"
+        [[ ${#COMMAND_ARGS[@]} -eq 0 ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
         mkdir -p "$ATLAS_DIR/specs"
@@ -248,8 +342,6 @@ GITIGNORE
         log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
         log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
 
-        # Interactive mode (no -p) allows AskUserQuestionTool
-        # --dangerously-skip-permissions avoids permission prompts
         if [[ "$ATLAS_CLI" == "opencode" ]]; then
             export OPENCODE_PERMISSION='{"*":"allow"}'
             opencode run --agent plan "$PLAN_PROMPT"
@@ -262,18 +354,13 @@ GITIGNORE
         exit 0
         ;;
     resume)
-        shift
-        RESUME_ITERATIONS="${1:-$DEFAULT_MAX_ITERATIONS}"
+        [[ ${#COMMAND_ARGS[@]} -gt 1 ]] && { echo "Usage: atlas resume [iterations]"; exit 1; }
+        [[ ${#COMMAND_ARGS[@]} -eq 1 && ! "${COMMAND_ARGS[0]}" =~ ^[0-9]+$ ]] && { echo "Error: iterations must be a number"; exit 1; }
+        RESUME_ITERATIONS="${COMMAND_ARGS[0]:-$DEFAULT_MAX_ITERATIONS}"
 
-        # Validar número si se proporciona
-        [[ $# -gt 0 && ! "$1" =~ ^[0-9]+$ ]] && { echo "Error: iterations must be a number"; exit 1; }
-
-        # Verificar .atlas/ existe
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
         SESSION_FILE=".atlas/integration-session.json"
-
-        # Verificar session file existe
         if [[ ! -f "$SESSION_FILE" ]]; then
             echo "❌ No active integration session found."
             echo ""
@@ -282,16 +369,13 @@ GITIGNORE
             exit 1
         fi
 
-        # Leer session data (parsing bash puro)
         SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
         SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
         SESSION_NAME=$(awk -F'"' '/"session_name"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
 
-        # Validar datos
         [[ -z "$SESSION_PR" || "$SESSION_PR" == "null" ]] && { echo "❌ Invalid session file: missing pr_number"; exit 1; }
         [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" ]] && { echo "❌ Invalid session file: missing branch"; exit 1; }
 
-        # Verificar estado del PR
         echo "🔍 Checking session status..."
         PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
 
@@ -310,7 +394,6 @@ GITIGNORE
                 echo "✓ Session active: $SESSION_NAME (PR #$SESSION_PR)" ;;
         esac
 
-        # Checkout a integration branch
         echo "📍 Switching to: $SESSION_BRANCH"
         if ! git checkout "$SESSION_BRANCH" 2>/dev/null; then
             if git show-ref --verify --quiet "refs/remotes/origin/$SESSION_BRANCH"; then
@@ -322,47 +405,55 @@ GITIGNORE
         fi
         git pull origin "$SESSION_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull"
 
-        # Exportar para loop
         export MAX_ITERATIONS="$RESUME_ITERATIONS"
         export RESUME_MODE="true"
         echo ""
         ;;
     review)
-        shift
-
-        # Validations
+        [[ ${#COMMAND_ARGS[@]} -gt 0 ]] && { echo "Usage: atlas review [--dry-run]"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+        [[ ! -f "$ATLAS_HOME/review_prompt.md" ]] && { echo "Error: review_prompt.md not found in $ATLAS_HOME. Run 'atlas update' first."; exit 1; }
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Review - AI Audit & Repair                    ║"
         echo "╚═══════════════════════════════════════════════════════╝"
         echo ""
 
-        # Detect git mode
         GIT_MODE="false"
         [[ -d ".git" ]] && GIT_MODE="true"
 
-        # Build context file list
         CLAUDE_MD="CLAUDE.md"
         [[ ! -f "$CLAUDE_MD" ]] && CLAUDE_MD=""
 
         SESSION_FILE="$ATLAS_DIR/integration-session.json"
         [[ ! -f "$SESSION_FILE" ]] && SESSION_FILE=""
 
-        # Export variables for prompt substitution
         export PROJECT_DIR PROJECT_NAME GIT_MODE
         export BACKLOG_FILE GUARDRAILS_FILE PROGRESS_FILE ERRORS_LOG ACTIVITY_LOG
         export CLAUDE_MD SESSION_FILE
 
-        # Build review prompt from template
         REVIEW_PROMPT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $GIT_MODE $BACKLOG_FILE $GUARDRAILS_FILE $PROGRESS_FILE $ERRORS_LOG $CLAUDE_MD $ACTIVITY_LOG $SESSION_FILE' < "$ATLAS_HOME/review_prompt.md")
+
+        if [[ "$REVIEW_DRY_RUN" == "true" ]]; then
+            REVIEW_PROMPT="$REVIEW_PROMPT
+
+## DRY RUN MODE (STRICT)
+- You are in report-only mode.
+- DO NOT modify files.
+- DO NOT run git commit/push/merge/rebase commands.
+- DO NOT run commands that mutate project state.
+- Only inspect and report findings + recommended fixes."
+        fi
+
+        REVIEW_MODE_LABEL="APPLY FIXES"
+        [[ "$REVIEW_DRY_RUN" == "true" ]] && REVIEW_MODE_LABEL="DRY-RUN (report only)"
 
         echo "🔍 Analyzing project state with AI..."
         echo "   Provider: $ATLAS_CLI"
         echo "   Git mode: $GIT_MODE"
+        echo "   Mode: $REVIEW_MODE_LABEL"
         echo ""
 
-        # Invoke AI based on selected CLI
         if [[ "$ATLAS_CLI" == "opencode" ]]; then
             export OPENCODE_PERMISSION='{"*":"allow"}'
             opencode run --agent review "$REVIEW_PROMPT"
@@ -374,42 +465,67 @@ GITIGNORE
 
         exit 0
         ;;
-    help|--help|-h)
-        echo "Atlas - Autonomous Task Loop Agent System v$ATLAS_VERSION"
-        echo ""
-        echo "Usage: atlas [options] [command]"
-        echo ""
-        echo "Commands:"
-        echo "  atlas init                  Initialize .atlas/ in current project"
-        echo "  atlas plan <description>    Interview and plan a feature"
-        echo "  atlas review [--dry-run]    Audit and fix issues from Atlas iterations"
-        echo "  atlas resume [iterations]   Resume interrupted integration session"
-        echo "  atlas update                Update Atlas from GitHub (preserves your data)"
-        echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
-        echo ""
-        echo "Options:"
-        echo "  --cli <provider>            AI provider: claudecode (default) | opencode | codex"
-        echo "  --version, -v               Show version information"
-        echo "  --help, -h                  Show this help message"
-        echo ""
-        echo "Environment variables:"
-        echo "  ATLAS_CLI=claudecode        Default AI provider (claudecode | opencode | codex)"
-        echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
-        echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
-        echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
-        echo "  ATLAS_NOTIFY_TELEGRAM=true  Enable Telegram notifications"
-        echo "  ATLAS_TELEGRAM_BOT=...      Telegram bot token"
-        echo "  ATLAS_TELEGRAM_CHAT=...     Telegram chat ID"
-        echo ""
-        echo "Examples:"
-        echo "  atlas 25                              # Run with Claude Code (default)"
-        echo "  atlas --cli opencode 25               # Run with OpenCode"
-        echo "  atlas --cli codex 25                  # Run with Codex"
-        echo "  ATLAS_CLI=opencode atlas 25           # Run with OpenCode (env var)"
-        echo "  atlas plan \"new feature\"              # Plan with Claude Code"
+    clean)
+        [[ ${#COMMAND_ARGS[@]} -gt 0 ]] && { echo "Usage: atlas clean [--all]"; exit 1; }
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+
+        mkdir -p "$RUNS_DIR"
+        RUN_LOGS_REMOVED=$(find "$RUNS_DIR" -maxdepth 1 -type f -name '*.log' | wc -l | tr -d ' ')
+        if [[ "$RUN_LOGS_REMOVED" -gt 0 ]]; then
+            find "$RUNS_DIR" -maxdepth 1 -type f -name '*.log' -delete
+        fi
+
+        TMP_FILES_REMOVED=$(find "$ATLAS_DIR" -maxdepth 1 -type f -name '*.tmp' | wc -l | tr -d ' ')
+        if [[ "$TMP_FILES_REMOVED" -gt 0 ]]; then
+            find "$ATLAS_DIR" -maxdepth 1 -type f -name '*.tmp' -delete
+        fi
+
+        SESSION_STATUS="not-found"
+        if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
+            SESSION_STATUS="kept"
+            SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
+            SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
+            PR_STATE="UNKNOWN"
+            if command -v gh >/dev/null 2>&1 && [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
+                PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
+            fi
+
+            if [[ "$CLEAN_ALL" == "true" || "$PR_STATE" == "MERGED" || "$PR_STATE" == "CLOSED" ]]; then
+                rm -f "$ATLAS_DIR/integration-session.json"
+                SESSION_STATUS="removed"
+                if [[ -n "$SESSION_BRANCH" ]] && git show-ref --verify --quiet "refs/heads/$SESSION_BRANCH" 2>/dev/null; then
+                    git branch -D "$SESSION_BRANCH" 2>/dev/null || true
+                fi
+            fi
+        fi
+
+        if [[ "$CLEAN_ALL" == "true" ]]; then
+            { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG"
+            { echo "# Error Log"; echo ""; } > "$ERRORS_LOG"
+        fi
+
+        echo "🧹 Atlas clean completed"
+        echo "   Removed run logs: $RUN_LOGS_REMOVED"
+        echo "   Removed temp files: $TMP_FILES_REMOVED"
+        echo "   Integration session: $SESSION_STATUS"
+        [[ "$CLEAN_ALL" == "true" ]] && echo "   Reset activity/errors logs: yes"
         exit 0
         ;;
+    help)
+        print_help
+        exit 0
+        ;;
+    run)
+        ;;
 esac
+
+if [[ "$COMMAND" == "run" ]]; then
+    [[ ${#COMMAND_ARGS[@]} -gt 1 ]] && { echo "Usage: atlas [iterations]"; exit 1; }
+    if [[ ${#COMMAND_ARGS[@]} -eq 1 ]]; then
+        [[ "${COMMAND_ARGS[0]}" =~ ^[0-9]+$ ]] || { echo "Error: iterations must be a number"; exit 1; }
+        RUN_ITERATIONS_OVERRIDE="${COMMAND_ARGS[0]}"
+    fi
+fi
 
 # Validate that the selected AI CLI is installed
 case "$ATLAS_CLI" in
@@ -442,17 +558,7 @@ esac
 MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
 STALE_SECONDS="${ATLAS_STALE_SECONDS:-$DEFAULT_STALE_SECONDS}"
 TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
-
-# Validate arguments - only numbers allowed at this point
-if [[ $# -gt 0 ]]; then
-    if [[ "$1" =~ ^[0-9]+$ ]]; then
-        MAX_ITERATIONS="$1"
-    else
-        echo "Error: Unknown command '$1'"
-        echo "Run 'atlas help' for usage"
-        exit 1
-    fi
-fi
+[[ -n "${RUN_ITERATIONS_OVERRIDE:-}" ]] && MAX_ITERATIONS="$RUN_ITERATIONS_OVERRIDE"
 
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 [[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
@@ -563,7 +669,10 @@ reset_stale_tasks
 if [[ "${RESUME_MODE:-false}" == "true" ]]; then
     export GIT_MODE="true"
     export DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
-    [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
+    if [[ -z "$DEFAULT_BRANCH" ]]; then
+        DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
+        [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH="main"
+    fi
     echo "📍 Resumed session - skipping branch setup"
     echo ""
 elif [[ -d "$PROJECT_DIR/.git" ]]; then

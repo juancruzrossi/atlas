@@ -83,7 +83,8 @@ atlas
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
 | `atlas review [--dry-run]` | Audit and fix issues from Atlas iterations |
 | `atlas resume [N]` | Resume interrupted integration session |
-| `atlas --cli <provider> [N]` | Run with specific AI provider (claudecode \| opencode \| codex) |
+| `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
+| `atlas [--cli <provider>] <command>` | Run any command with a specific AI provider |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |
 
@@ -129,6 +130,7 @@ After Atlas completes (or is interrupted), audit and fix issues:
 ```bash
 atlas review           # Detect and auto-fix issues
 atlas review --dry-run # Report only, no changes
+atlas --cli opencode review --dry-run # Same, using OpenCode
 ```
 
 Review checks for:
@@ -138,6 +140,17 @@ Review checks for:
 - Uncommitted changes and unpushed commits
 
 Auto-fixes safe issues and reports those requiring manual intervention.
+
+---
+
+## Cleaning Runtime Files
+
+Use `clean` to remove local runtime artifacts:
+
+```bash
+atlas clean       # Remove .atlas/runs/*.log and temporary files
+atlas clean --all # Also reset activity/errors logs and stale session metadata
+```
 
 ---
 
