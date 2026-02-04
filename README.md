@@ -36,11 +36,11 @@ curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh
 
 Atlas supports multiple AI providers:
 
-| Provider | Flag | Installation |
-|----------|------|--------------|
+| Provider | Flag | Documentation |
+|----------|------|---------------|
 | Claude Code (default) | `--cli claudecode` | [docs.anthropic.com/claude-code](https://docs.anthropic.com/claude-code) |
-| OpenCode | `--cli opencode` | `curl -fsSL https://opencode.ai/install \| bash` |
-| Codex (OpenAI) | `--cli codex` | `npm install -g @openai/codex` |
+| OpenCode | `--cli opencode` | [opencode.ai/docs](https://opencode.ai/docs) |
+| Codex (OpenAI) | `--cli codex` | [developers.openai.com/codex/cli](https://developers.openai.com/codex/cli) |
 
 ```bash
 # Use Claude Code (default)
