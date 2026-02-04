@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-02-04
+
+### Added
+- **`atlas resume` command**: Resume interrupted integration sessions
+  - Detects active session from `.atlas/integration-session.json`
+  - Verifies PR not merged/closed before resuming
+  - Switches to integration branch and continues iteration loop
+  - Clear error messages for each failure scenario
+
 ## [2.0.2] - 2026-02-03
 
 ### Fixed

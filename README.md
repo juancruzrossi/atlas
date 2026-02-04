@@ -72,6 +72,7 @@ atlas
 | `atlas init` | Initialize `.atlas/` in current project |
 | `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
+| `atlas resume [N]` | Resume interrupted integration session |
 | `atlas --cli <provider> [N]` | Run with specific AI provider (claudecode \| opencode) |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |
@@ -92,6 +93,22 @@ atlas 5
 # → Executes 5 tasks autonomously (no human intervention)
 # → Each task reads the full spec for context (integral view)
 ```
+
+---
+
+## Resuming Sessions
+
+If Atlas is interrupted (quota limit, error, Ctrl+C), resume with:
+
+```bash
+atlas resume      # Continue with default iterations
+atlas resume 5    # Continue with 5 iterations
+```
+
+Resume will:
+1. Find the active integration branch
+2. Verify PR is not merged/closed
+3. Continue processing tasks from backlog
 
 ---
 
