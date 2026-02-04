@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-02-04
+
+### Fixed
+- **Codex review output is now fully non-interactive in Atlas Review**:
+  - `atlas review --cli codex` no longer streams Codex session chatter to console
+  - Codex output is captured in `.atlas/runs/review-*.log`
+  - Console now shows a clean status message and log location
+
+### Documentation
+- Clarified README command syntax for provider flag usage (`command or iterations`)
+- Clarified that `.atlas/specs/` is created by `atlas plan` (not by `atlas init`)
+
 ## [2.4.0] - 2026-02-04
 
 ### Added
