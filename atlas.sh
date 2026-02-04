@@ -159,6 +159,7 @@ GITIGNORE
         curl -fsSL "$REPO_URL/atlas.sh" -o "$TEMP_ATLAS" || true
         curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
         curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
+        curl -fsSL "$REPO_URL/review_prompt.md" -o "$ATLAS_HOME/review_prompt.md" || true
         curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
         curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
 
