@@ -80,11 +80,12 @@ Do NOT skip this step. Read files in parallel for efficiency.
    ELSE:
    - (skip - changes already in working directory)
 
-7. Finalize:
-   - Move task to DONE with date (and PR number if GIT_MODE=true)
-   - Append to progress.txt (see format below)
+7. **CRITICAL - Finalize (NEVER SKIP)**:
+   - **MUST** move task from IN_PROGRESS to DONE in backlog.md with date and PR number
+   - **MUST** append to progress.txt (see format below)
    - Add Sign to guardrails.md if you learned something useful
    - IF GIT_MODE=true: git add .atlas/ && git commit -m "chore: complete [TASK_ID]" && git push
+   - **VERIFY**: Task MUST appear in DONE section before proceeding
 
 8. Print summary (MANDATORY - see format below)
 ```

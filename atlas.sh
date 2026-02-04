@@ -6,6 +6,45 @@ PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
+# Atlas version
+ATLAS_VERSION="2.0.1"
+
+# AI Provider configuration (claudecode | opencode)
+# Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
+ATLAS_CLI="${ATLAS_CLI:-claudecode}"
+
+# Parse command line arguments for --cli flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --cli)
+            shift
+            if [[ -n "$1" && "$1" != -* ]]; then
+                if [[ "$1" == "claudecode" || "$1" == "opencode" ]]; then
+                    ATLAS_CLI="$1"
+                else
+                    echo "Error: --cli requires 'claudecode' or 'opencode', got '$1'"
+                    exit 1
+                fi
+                shift
+            else
+                echo "Error: --cli requires an argument (claudecode or opencode)"
+                exit 1
+            fi
+            ;;
+        --version|-v)
+            echo "Atlas v$ATLAS_VERSION"
+            exit 0
+            ;;
+        --help|-h)
+            # Will be handled in case statement
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 DEFAULT_MAX_ITERATIONS=25
 DEFAULT_STALE_SECONDS=7200
 DEFAULT_TIMEOUT=1200
@@ -17,6 +56,28 @@ ERRORS_LOG="$ATLAS_DIR/errors.log"
 PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
+
+# Cross-platform timeout function
+run_with_timeout() {
+    local timeout_seconds=$1
+    shift
+
+    # Try GNU timeout (Linux)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout --foreground "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    # Try gtimeout (macOS with brew install coreutils)
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout --foreground "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    # Fallback: run without timeout (macOS without coreutils)
+    "$@"
+    return $?
+}
 
 case "${1:-}" in
     init)
@@ -48,15 +109,29 @@ GITIGNORE
         fi
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
 
-        # Install Atlas skills to ~/.claude/skills/
+        # Install Atlas skills to available AI providers only
         if [[ -d "$ATLAS_HOME/skills" ]]; then
-            mkdir -p "${HOME}/.claude/skills"
-            for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                skill_name=$(basename "$skill_dir")
-                mkdir -p "${HOME}/.claude/skills/$skill_name"
-                cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
-            done
-            echo "  Installed: Atlas skills to ~/.claude/skills/"
+            # Install to Claude Code if available
+            if command -v claude >/dev/null 2>&1; then
+                mkdir -p "${HOME}/.claude/skills"
+                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                    skill_name=$(basename "$skill_dir")
+                    mkdir -p "${HOME}/.claude/skills/$skill_name"
+                    cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
+                done
+                echo "  Installed: Atlas skills to ~/.claude/skills/"
+            fi
+            
+            # Install to OpenCode if available
+            if command -v opencode >/dev/null 2>&1; then
+                mkdir -p "${HOME}/.config/opencode/skills"
+                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+                    skill_name=$(basename "$skill_dir")
+                    mkdir -p "${HOME}/.config/opencode/skills/$skill_name"
+                    cp -r "$skill_dir"/* "${HOME}/.config/opencode/skills/$skill_name/" 2>/dev/null || true
+                done
+                echo "  Installed: Atlas skills to ~/.config/opencode/skills/"
+            fi
         fi
 
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
@@ -64,35 +139,61 @@ GITIGNORE
         ;;
     update)
         REPO_URL="https://raw.githubusercontent.com/juancruzrossi/atlas/main"
-
-        # Get current version (skip Unreleased, find first X.Y.Z)
         OLD_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
 
-        # Download all files silently
+        echo "Updating Atlas..."
         mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills"
-        curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"
-        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md"
-        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md"
-        rm -f "$ATLAS_HOME/PLAN_PROMPT.md"  # Remove old file if exists
-        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md"
-        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh"
-        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null; done
-        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null; done
 
-        # Download and install Atlas skills
+        TEMP_ATLAS=$(mktemp)
+        curl -fsSL "$REPO_URL/atlas.sh" -o "$TEMP_ATLAS" || true
+        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
+        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
+        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
+        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
+
+        if [[ -s "$TEMP_ATLAS" ]]; then mv "$TEMP_ATLAS" "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"; else rm -f "$TEMP_ATLAS"; fi
+
+        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null || true; done
+        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true; done
+
         SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
-        mkdir -p "${HOME}/.claude/skills"
-        for skill in $SKILLS; do
-            mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
-            curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-            [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]] && cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"
+        
+        # Install to Claude Code if available
+        if command -v claude >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.claude/skills"
+            for skill in $SKILLS; do
+                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
+                curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
+            done
+        fi
+        
+        # Install to OpenCode if available
+        if command -v opencode >/dev/null 2>&1; then
+            mkdir -p "${HOME}/.config/opencode/skills"
+            for skill in $SKILLS; do
+                mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
+                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
+            done
+        fi
+
+        ATLAS_BIN=$(which atlas 2>/dev/null || true)
+        if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
+
+        MISSING=()
+        for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
+            if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
         done
 
-        # Update binary in PATH if needed
-        ATLAS_BIN=$(which atlas 2>/dev/null)
-        [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]] && cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"
+        if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo ""
+            echo "✗ Error: Failed to download critical file(s):"
+            for f in "${MISSING[@]}"; do echo "  - $f"; done
+            echo ""
+            echo "Check your internet connection and try again."
+            exit 1
+        fi
 
-        # Get new version (skip Unreleased, find first X.Y.Z)
         NEW_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
 
         if [[ "$OLD_VERSION" == "$NEW_VERSION" ]]; then
@@ -100,24 +201,20 @@ GITIGNORE
         else
             echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
         fi
-        echo "✓ Skills installed to ~/.claude/skills/"
         exit 0
         ;;
     plan)
         shift
-        FEATURE_PROMPT="${1:-}"
+        FEATURE_PROMPT="$*"
 
-        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan \"feature description\""; exit 1; }
+        [[ -z "$FEATURE_PROMPT" ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
         mkdir -p "$ATLAS_DIR/specs"
         SPEC_FILE="$ATLAS_DIR/specs/spec-$(date +%Y%m%d-%H%M%S).md"
 
-        # Export variables for envsubst
         export FEATURE_REQUEST="$FEATURE_PROMPT"
         export PROJECT_DIR PROJECT_NAME SPEC_FILE BACKLOG_FILE
-
-        # Process plan_prompt.md with variable substitution
         PLAN_PROMPT=$(envsubst '$FEATURE_REQUEST $PROJECT_DIR $PROJECT_NAME $SPEC_FILE $BACKLOG_FILE' < "$ATLAS_HOME/plan_prompt.md")
 
         echo "╔═══════════════════════════════════════════════════════╗"
@@ -132,7 +229,12 @@ GITIGNORE
 
         # Interactive mode (no -p) allows AskUserQuestionTool
         # --dangerously-skip-permissions avoids permission prompts
-        claude --dangerously-skip-permissions "$PLAN_PROMPT"
+        if [[ "$ATLAS_CLI" == "opencode" ]]; then
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            opencode run --agent plan "$PLAN_PROMPT"
+        else
+            claude --dangerously-skip-permissions "$PLAN_PROMPT"
+        fi
 
         exit 0
         ;;
@@ -206,23 +308,57 @@ GITIGNORE
         echo ""
         ;;
     help|--help|-h)
-        echo "Atlas - Autonomous Task Loop Agent System"
+        echo "Atlas - Autonomous Task Loop Agent System v$ATLAS_VERSION"
         echo ""
-        echo "Usage: atlas [iterations]"
-        echo "       atlas init         - Initialize .atlas/ in current project"
-        echo "       atlas plan \"...\"   - Interview and plan a feature"
-        echo "       atlas resume [N]   - Resume interrupted integration session"
-        echo "       atlas update       - Update Atlas from GitHub (preserves your data)"
-        echo "       atlas 25           - Run 25 iterations"
+        echo "Usage: atlas [options] [command]"
         echo ""
-        echo "Environment variables (all configurable):"
+        echo "Commands:"
+        echo "  atlas init                  Initialize .atlas/ in current project"
+        echo "  atlas plan <description>    Interview and plan a feature"
+        echo "  atlas resume [iterations]   Resume interrupted integration session"
+        echo "  atlas update                Update Atlas from GitHub (preserves your data)"
+        echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
+        echo ""
+        echo "Options:"
+        echo "  --cli <provider>            AI provider: claudecode (default) | opencode"
+        echo "  --version, -v               Show version information"
+        echo "  --help, -h                  Show this help message"
+        echo ""
+        echo "Environment variables:"
+        echo "  ATLAS_CLI=claudecode        Default AI provider (claudecode | opencode)"
         echo "  ATLAS_MAX_ITERATIONS=25     Max iterations per run"
         echo "  ATLAS_TIMEOUT=1200          Timeout per iteration in seconds (20 min)"
         echo "  ATLAS_STALE_SECONDS=7200    Reset stuck tasks after N seconds (2 hours)"
-        echo "  ATLAS_NOTIFY_TELEGRAM=false Disable Telegram notifications"
+        echo "  ATLAS_NOTIFY_TELEGRAM=true  Enable Telegram notifications"
         echo "  ATLAS_TELEGRAM_BOT=...      Telegram bot token"
         echo "  ATLAS_TELEGRAM_CHAT=...     Telegram chat ID"
+        echo ""
+        echo "Examples:"
+        echo "  atlas 25                              # Run with Claude Code (default)"
+        echo "  atlas --cli opencode 25               # Run with OpenCode"
+        echo "  ATLAS_CLI=opencode atlas 25           # Run with OpenCode (env var)"
+        echo "  atlas plan \"new feature\"              # Plan with Claude Code"
         exit 0
+        ;;
+esac
+
+# Validate that the selected AI CLI is installed
+case "$ATLAS_CLI" in
+    claudecode)
+        if ! command -v claude >/dev/null 2>&1; then
+            echo "❌ Error: Claude Code not found"
+            echo "   Install it: https://docs.anthropic.com/en/docs/claude-code"
+            echo "   Or use OpenCode: curl -fsSL https://opencode.ai/install | bash"
+            exit 1
+        fi
+        ;;
+    opencode)
+        if ! command -v opencode >/dev/null 2>&1; then
+            echo "❌ Error: OpenCode not found"
+            echo "   Install it: curl -fsSL https://opencode.ai/install | bash"
+            echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
+            exit 1
+        fi
         ;;
 esac
 
@@ -336,6 +472,7 @@ echo "╔═══════════════════════�
 echo "║  Atlas - Autonomous Task Loop Agent System            ║"
 echo "╠═══════════════════════════════════════════════════════╣"
 echo "║  Project: $PROJECT_NAME"
+echo "║  AI Provider: $ATLAS_CLI"
 echo "║  Iterations: $MAX_ITERATIONS"
 echo "║  Run: $RUN_TAG"
 echo "╚═══════════════════════════════════════════════════════╝"
@@ -509,8 +646,13 @@ $PROMPT_CONTENT"
     while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
         RETRY_COUNT=$((RETRY_COUNT + 1))
 
-        # Run claude and capture output
-        OUTPUT=$(timeout --foreground "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+        # Run AI CLI and capture output
+        if [[ "$ATLAS_CLI" == "opencode" ]]; then
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
+        else
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
+        fi
 
         # Check for CLI errors
         CLI_ERROR=""

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.17.0] - 2026-02-04
+## [2.1.0] - 2026-02-04
 
 ### Added
 - **`atlas resume` command**: Resume interrupted integration sessions
@@ -15,6 +15,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Verifies PR not merged/closed before resuming
   - Switches to integration branch and continues iteration loop
   - Clear error messages for each failure scenario
+
+## [2.0.2] - 2026-02-03
+
+### Fixed
+- **CRITICAL: Backlog update enforcement** - Tasks were being completed (PRs merged) but not moved to DONE in backlog.md, causing state drift
+- Step 7 (Finalize) now marked as CRITICAL with explicit verification requirement
+- Added "CRITICAL: Update Backlog After Merge" section to `atlas-integration-flow` skill
+- Added verification rules to `atlas-state` skill: must confirm task in DONE before starting next task
+- Root cause: Model was merging PRs but skipping the backlog update step, leaving completed tasks in TODO
+
+## [2.0.1] - 2026-02-02
+
+### Fixed
+- **OpenCode invocation syntax** - Fixed "You must provide a message or a command" error by passing prompt content as argument instead of using `--file` flag
+
+## [2.0.0] - 2026-02-02
+
+### Added
+- **Multi-provider AI support** - Atlas now supports both Claude Code and OpenCode
+- **`--cli <provider>` flag** - Switch AI provider per command (claudecode | opencode)
+- **`ATLAS_CLI` environment variable** - Set default provider for all sessions
+- **Skills installation to OpenCode** - Atlas skills now installed to both `~/.claude/skills/` and `~/.config/opencode/skills/` (via `atlas init`, `atlas update`, and `install.sh`)
+- **Provider validation** - Clear error messages if selected CLI is not installed, with installation instructions
+- **Version flag** - `atlas --version` now displays current version (2.0.0)
+- **Provider display** - Header now shows which AI provider is being used
+
+### Changed
+- Default provider remains Claude Code for backward compatibility
+- `atlas plan` works with both providers (Claude Code recommended for best interactive experience)
+- Improved error handling for missing AI CLIs
+- Enhanced help documentation with examples for both providers
+
+## [1.17.1] - 2026-02-02
+
+### Fixed
+- **macOS compatibility** - Fixed `timeout: command not found` error on macOS by using cross-platform timeout detection
+
+## [1.17.0] - 2026-02-02
+
+### Added
+- **`atlas plan` now accepts args without quotes** - Both `atlas plan foo bar` and `atlas plan "foo bar"` work
+
+### Fixed
+- **plan_prompt.md deletion on case-insensitive filesystems** - macOS users can now run `atlas update` without breaking `atlas plan`
+- Download validation in `atlas update` and `install.sh` - clearer error messages when downloads fail
+
+### Changed
+- Removed unnecessary comments from `atlas.sh` and `install.sh` for cleaner code
 
 ## [1.16.3] - 2026-01-23
 

@@ -155,6 +155,27 @@ git checkout "$BASE_BRANCH"
 git pull origin "$BASE_BRANCH"
 ```
 
+## CRITICAL: Update Backlog After Merge
+
+**IMMEDIATELY after merging a PR, you MUST update the backlog:**
+
+```bash
+# 1. Move task from IN_PROGRESS to DONE in backlog.md
+#    Add completion date and PR number
+
+# 2. Append to progress.txt with summary
+
+# 3. Commit and push state changes
+git add .atlas/
+git commit -m "chore: complete [TASK_ID]"
+git push
+```
+
+**NEVER proceed to the next task without updating the backlog.**
+This is the most common source of state drift - tasks get completed but backlog shows them as pending.
+
+**Verification**: Before starting a new task, confirm the previous task appears in the DONE section of backlog.md.
+
 ## End of Session
 
 The integration branch stays with PR open to main (Ready for Review). Human reviews and merges when ready.
