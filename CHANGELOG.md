@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-02-04
+
+### Changed
+- **BREAKING: `atlas review` now uses AI** for intelligent auditing and repair
+  - Replaces bash-only checks with AI-powered analysis
+  - Loads full context (backlog, guardrails, progress, CLAUDE.md, git state)
+  - Enforces ALL Atlas directives (from prompt.md, guardrails.md, CLAUDE.md)
+  - Fixes inconsistencies automatically where possible
+  - Reports what cannot be auto-fixed with clear reasoning
+  - Respects `ATLAS_CLI` setting (codex/claude/opencode)
+- New `review_prompt.md` with comprehensive audit checklist
+
+### Fixed
+- Review now properly audits directive compliance (quality gates, state transitions, etc.)
+- Review can intelligently assess if tasks are truly complete
+- Review understands context and makes smart decisions (not just mechanical checks)
+
 ## [2.2.1] - 2026-02-04
 
 ### Fixed
