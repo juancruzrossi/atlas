@@ -458,7 +458,20 @@ GITIGNORE
             export OPENCODE_PERMISSION='{"*":"allow"}'
             opencode run --agent review "$REVIEW_PROMPT"
         elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            codex exec --yolo "$REVIEW_PROMPT"
+            mkdir -p "$RUNS_DIR"
+            REVIEW_RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
+            REVIEW_LOG_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG.log"
+            REVIEW_LAST_MESSAGE_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG-last-message.txt"
+
+            if codex exec --yolo -o "$REVIEW_LAST_MESSAGE_FILE" "$REVIEW_PROMPT" > "$REVIEW_LOG_FILE" 2>&1; then
+                echo "✅ Codex review completed (non-interactive mode)"
+                echo "   Log: $REVIEW_LOG_FILE"
+            else
+                echo "❌ Codex review failed"
+                echo "   Log: $REVIEW_LOG_FILE"
+                tail -n 40 "$REVIEW_LOG_FILE" 2>/dev/null || true
+                exit 1
+            fi
         else
             claude --dangerously-skip-permissions "$REVIEW_PROMPT"
         fi
