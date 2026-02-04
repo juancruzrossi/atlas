@@ -84,7 +84,7 @@ atlas
 | `atlas review [--dry-run]` | Audit and fix issues from Atlas iterations |
 | `atlas resume [N]` | Resume interrupted integration session |
 | `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
-| `atlas [--cli <provider>] <command>` | Run any command with a specific AI provider |
+| `atlas [--cli <provider>] [command or iterations]` | Run any command (or iteration loop) with a specific AI provider |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |
 
@@ -222,7 +222,7 @@ for each iteration:
 
 ## Project Structure
 
-After `atlas init`:
+After `atlas init` (`specs/` appears after `atlas plan`):
 
 ```
 your-project/
@@ -233,7 +233,7 @@ your-project/
     ├── guardrails.md      # Rules from past errors
     ├── errors.log         # Failure log
     ├── activity.log       # Run history
-    ├── specs/             # Feature specs (from atlas plan)
+    ├── specs/             # Feature specs (created by atlas plan)
     └── runs/              # Iteration logs
 ```
 
