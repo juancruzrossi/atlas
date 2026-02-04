@@ -238,6 +238,75 @@ GITIGNORE
 
         exit 0
         ;;
+    resume)
+        shift
+        RESUME_ITERATIONS="${1:-$DEFAULT_MAX_ITERATIONS}"
+
+        # Validar número si se proporciona
+        [[ $# -gt 0 && ! "$1" =~ ^[0-9]+$ ]] && { echo "Error: iterations must be a number"; exit 1; }
+
+        # Verificar .atlas/ existe
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+
+        SESSION_FILE=".atlas/integration-session.json"
+
+        # Verificar session file existe
+        if [[ ! -f "$SESSION_FILE" ]]; then
+            echo "❌ No active integration session found."
+            echo ""
+            echo "There is no session to resume. To start a new session:"
+            echo "  atlas [N]    Start new session with N iterations"
+            exit 1
+        fi
+
+        # Verificar jq disponible
+        command -v jq &>/dev/null || { echo "Error: 'jq' required for session management."; exit 1; }
+
+        # Leer session data
+        SESSION_BRANCH=$(jq -r '.branch' "$SESSION_FILE" 2>/dev/null)
+        SESSION_PR=$(jq -r '.pr_number' "$SESSION_FILE" 2>/dev/null)
+        SESSION_NAME=$(jq -r '.session_name' "$SESSION_FILE" 2>/dev/null)
+
+        # Validar datos
+        [[ -z "$SESSION_PR" || "$SESSION_PR" == "null" ]] && { echo "❌ Invalid session file: missing pr_number"; exit 1; }
+        [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" ]] && { echo "❌ Invalid session file: missing branch"; exit 1; }
+
+        # Verificar estado del PR
+        echo "🔍 Checking session status..."
+        PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
+
+        case "$PR_STATE" in
+            MERGED)
+                echo "❌ Session already merged (PR #$SESSION_PR)."
+                echo "   Use 'atlas' to start a new session."
+                exit 1 ;;
+            CLOSED)
+                echo "❌ Session PR was closed (PR #$SESSION_PR)."
+                echo "   Reopen on GitHub or delete .atlas/integration-session.json"
+                exit 1 ;;
+            UNKNOWN)
+                echo "⚠️  Could not verify PR status (offline?). Continuing..." ;;
+            OPEN)
+                echo "✓ Session active: $SESSION_NAME (PR #$SESSION_PR)" ;;
+        esac
+
+        # Checkout a integration branch
+        echo "📍 Switching to: $SESSION_BRANCH"
+        if ! git checkout "$SESSION_BRANCH" 2>/dev/null; then
+            if git show-ref --verify --quiet "refs/remotes/origin/$SESSION_BRANCH"; then
+                git checkout -b "$SESSION_BRANCH" "origin/$SESSION_BRANCH" || { echo "❌ Failed to checkout"; exit 1; }
+            else
+                echo "❌ Branch not found: $SESSION_BRANCH"
+                exit 1
+            fi
+        fi
+        git pull origin "$SESSION_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull"
+
+        # Exportar para loop
+        export MAX_ITERATIONS="$RESUME_ITERATIONS"
+        export RESUME_MODE="true"
+        echo ""
+        ;;
     help|--help|-h)
         echo "Atlas - Autonomous Task Loop Agent System v$ATLAS_VERSION"
         echo ""
@@ -246,6 +315,7 @@ GITIGNORE
         echo "Commands:"
         echo "  atlas init                  Initialize .atlas/ in current project"
         echo "  atlas plan <description>    Interview and plan a feature"
+        echo "  atlas resume [iterations]   Resume interrupted integration session"
         echo "  atlas update                Update Atlas from GitHub (preserves your data)"
         echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
         echo ""
@@ -412,8 +482,14 @@ log_activity "RUN START run=$RUN_TAG iterations=$MAX_ITERATIONS"
 
 reset_stale_tasks
 
-# Detect git mode
-if [[ -d "$PROJECT_DIR/.git" ]]; then
+# Si estamos en resume mode, saltar setup de branch (ya hicimos checkout)
+if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+    export GIT_MODE="true"
+    export DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
+    [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
+    echo "📍 Resumed session - skipping branch setup"
+    echo ""
+elif [[ -d "$PROJECT_DIR/.git" ]]; then
     export GIT_MODE="true"
 
     # Detect default branch (main, master, or configured)
