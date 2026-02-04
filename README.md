@@ -29,12 +29,18 @@ curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh
 
 ### Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default) **or** [OpenCode](https://opencode.ai) (alternative)
+- AI Provider: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default), [OpenCode](https://opencode.ai), or [Codex](https://github.com/openai/codex)
 - Git (optional - enables branches, PRs, and commits)
 
 ### AI Provider Configuration
 
-Atlas supports multiple AI providers. By default, it uses Claude Code, but you can switch to OpenCode:
+Atlas supports multiple AI providers:
+
+| Provider | Flag | Installation |
+|----------|------|--------------|
+| Claude Code (default) | `--cli claudecode` | [docs.anthropic.com/claude-code](https://docs.anthropic.com/claude-code) |
+| OpenCode | `--cli opencode` | `curl -fsSL https://opencode.ai/install \| bash` |
+| Codex (OpenAI) | `--cli codex` | `npm install -g @openai/codex` |
 
 ```bash
 # Use Claude Code (default)
@@ -43,12 +49,15 @@ atlas 25
 # Use OpenCode
 atlas --cli opencode 25
 
+# Use Codex
+atlas --cli codex 25
+
 # Or set environment variable (persists across sessions)
-export ATLAS_CLI=opencode
+export ATLAS_CLI=codex
 atlas 25
 ```
 
-**Recommendation**: Use Claude Code for `atlas plan` (interactive mode works best) and OpenCode for `atlas [N]` (autonomous execution).
+**Recommendation**: Use Claude Code for `atlas plan` (interactive mode works best). For autonomous execution (`atlas [N]`), any provider works.
 
 ---
 
@@ -72,8 +81,9 @@ atlas
 | `atlas init` | Initialize `.atlas/` in current project |
 | `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
+| `atlas review [--dry-run]` | Audit and fix issues from Atlas iterations |
 | `atlas resume [N]` | Resume interrupted integration session |
-| `atlas --cli <provider> [N]` | Run with specific AI provider (claudecode \| opencode) |
+| `atlas --cli <provider> [N]` | Run with specific AI provider (claudecode \| opencode \| codex) |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |
 
@@ -112,12 +122,31 @@ Resume will:
 
 ---
 
+## Reviewing Work
+
+After Atlas completes (or is interrupted), audit and fix issues:
+
+```bash
+atlas review           # Detect and auto-fix issues
+atlas review --dry-run # Report only, no changes
+```
+
+Review checks for:
+- Tasks stuck in wrong state (multiple IN_PROGRESS, etc.)
+- Orphaned PRs not merged to integration
+- Backlog out of sync with merged PRs
+- Uncommitted changes and unpushed commits
+
+Auto-fixes safe issues and reports those requiring manual intervention.
+
+---
+
 ## Configuration (optional)
 
 Override defaults with `ATLAS_` environment variables:
 
 ```bash
-export ATLAS_CLI=claudecode         # AI provider: claudecode (default) or opencode
+export ATLAS_CLI=claudecode         # AI provider: claudecode (default), opencode, or codex
 export ATLAS_MAX_ITERATIONS=25      # Max iterations per run
 export ATLAS_TIMEOUT=1200           # Timeout per iteration (seconds)
 export ATLAS_STALE_SECONDS=7200     # Reset stuck tasks (seconds, 0 to disable)
