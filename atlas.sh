@@ -7,7 +7,7 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="2.2.1"
+ATLAS_VERSION="2.3.0"
 
 # AI Provider configuration (claudecode | opencode)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -328,298 +328,47 @@ GITIGNORE
         ;;
     review)
         shift
-        DRY_RUN=false
-        [[ "$1" == "--dry-run" ]] && DRY_RUN=true
 
         # Validations
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
-        [[ ! -d ".git" ]] && { echo "Error: 'atlas review' requires a git repository."; exit 1; }
 
         echo "╔═══════════════════════════════════════════════════════╗"
-        echo "║  Atlas Review - Cleanup Specialist                    ║"
+        echo "║  Atlas Review - AI Audit & Repair                    ║"
         echo "╚═══════════════════════════════════════════════════════╝"
         echo ""
 
-        ISSUES=0
-        FIXED=0
-        SESSION_FILE=".atlas/integration-session.json"
+        # Detect git mode
+        GIT_MODE="false"
+        [[ -d ".git" ]] && GIT_MODE="true"
 
-        # Read session if exists
-        if [[ -f "$SESSION_FILE" ]]; then
-            SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-            SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-            SESSION_NAME=$(awk -F'"' '/"session_name"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-        fi
+        # Build context file list
+        CLAUDE_MD="CLAUDE.md"
+        [[ ! -f "$CLAUDE_MD" ]] && CLAUDE_MD=""
 
-        # === CHECK 1: Multiple tasks in IN_PROGRESS ===
-        echo "[1/7] Multiple tasks in IN_PROGRESS"
-        count=$(awk '/^## IN_PROGRESS$/,/^## /{ if(/^### /) n++ } END{print n+0}' "$BACKLOG_FILE")
-        if [[ $count -gt 1 ]]; then
-            echo "      ⚠ ISSUE: $count tasks (max 1 allowed)"
-            ((ISSUES++))
-            if [[ "$DRY_RUN" == "false" ]]; then
-                # Move all except first back to TODO
-                awk '
-                    BEGIN { in_ip=0; task_count=0; buffer="" }
-                    /^## TODO$/ { todo_line=NR }
-                    /^## IN_PROGRESS$/ { in_ip=1; print; next }
-                    /^## DONE$/ { in_ip=0 }
-                    in_ip && /^### / {
-                        task_count++
-                        if (task_count == 1) {
-                            print
-                            next
-                        }
-                        # Store task to move to TODO
-                        buffer = buffer $0 "\n"
-                        in_task = 1
-                        next
-                    }
-                    in_ip && in_task && /^## / { in_task=0 }
-                    in_ip && in_task { buffer = buffer $0 "\n"; next }
-                    !in_ip && NR == todo_line { print; print buffer; buffer=""; next }
-                    { print }
-                ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
-                echo "      → FIX: Moved extras to TODO"
-                ((FIXED++))
-            fi
-        else
-            echo "      ✓ OK"
-        fi
+        SESSION_FILE="$ATLAS_DIR/integration-session.json"
+        [[ ! -f "$SESSION_FILE" ]] && SESSION_FILE=""
 
-        # === CHECK 2: Stuck tasks ===
+        # Export variables for prompt substitution
+        export PROJECT_DIR PROJECT_NAME GIT_MODE
+        export BACKLOG_FILE GUARDRAILS_FILE PROGRESS_FILE ERRORS_LOG ACTIVITY_LOG
+        export CLAUDE_MD SESSION_FILE
+
+        # Build review prompt from template
+        REVIEW_PROMPT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $GIT_MODE $BACKLOG_FILE $GUARDRAILS_FILE $PROGRESS_FILE $ERRORS_LOG $CLAUDE_MD $ACTIVITY_LOG $SESSION_FILE' < "$ATLAS_HOME/review_prompt.md")
+
+        echo "🔍 Analyzing project state with AI..."
+        echo "   Provider: $ATLAS_CLI"
+        echo "   Git mode: $GIT_MODE"
         echo ""
-        echo "[2/7] Stuck tasks"
-        in_progress_task=$(awk '/^## IN_PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
-        if [[ -n "$in_progress_task" ]]; then
-            task_id=$(echo "$in_progress_task" | grep -oP '### \K[^:]+')
-            # Check if there's a feature branch for this task
-            feature_branches=$(git branch --list "*$task_id*" 2>/dev/null | wc -l)
-            if [[ $feature_branches -eq 0 ]]; then
-                echo "      ⚠ ISSUE: Task $task_id in IN_PROGRESS but no feature branch"
-                ((ISSUES++))
-                if [[ "$DRY_RUN" == "false" ]]; then
-                    # Move back to TODO
-                    awk '
-                        /^## TODO$/ { print; getline; todo_content=$0; found_ip=0 }
-                        /^## IN_PROGRESS$/ { in_ip=1; print; next }
-                        /^## DONE$/ { in_ip=0; if (found_ip && task_block) { print "" } }
-                        in_ip && /^### / {
-                            if (!found_ip) {
-                                found_ip=1
-                                task_block=$0 "\n"
-                                next
-                            }
-                        }
-                        in_ip && found_ip && task_block && /^## / {
-                            # Insert at TODO
-                            print todo_content
-                            printf "%s\n", task_block
-                            task_block=""
-                            in_ip=0
-                        }
-                        in_ip && found_ip && !/^## / { task_block=task_block $0 "\n"; next }
-                        { print }
-                    ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
-                    echo "      → FIX: Moved to TODO"
-                    ((FIXED++))
-                fi
-            else
-                echo "      ✓ OK"
-            fi
+
+        # Invoke AI based on selected CLI
+        if [[ "$ATLAS_CLI" == "opencode" ]]; then
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            opencode run --agent review "$REVIEW_PROMPT"
+        elif [[ "$ATLAS_CLI" == "codex" ]]; then
+            codex exec --yolo "$REVIEW_PROMPT"
         else
-            echo "      ✓ OK (no task in IN_PROGRESS)"
-        fi
-
-        # === CHECK 3: Session integrity ===
-        echo ""
-        echo "[3/7] Session integrity"
-        if [[ -f "$SESSION_FILE" ]]; then
-            if [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" || -z "$SESSION_PR" || "$SESSION_PR" == "null" ]]; then
-                echo "      ⚠ ISSUE: Invalid session file (missing branch or PR)"
-                ((ISSUES++))
-                if [[ "$DRY_RUN" == "false" ]]; then
-                    rm -f "$SESSION_FILE"
-                    echo "      → FIX: Removed invalid session file"
-                    ((FIXED++))
-                fi
-            else
-                # Verify branch and PR exist
-                branch_exists=$(git show-ref --verify --quiet "refs/heads/$SESSION_BRANCH" && echo "yes" || echo "no")
-                pr_exists=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "NOTFOUND")
-
-                if [[ "$branch_exists" == "no" || "$pr_exists" == "NOTFOUND" ]]; then
-                    echo "      ⚠ ISSUE: Session references non-existent branch or PR"
-                    ((ISSUES++))
-                    if [[ "$DRY_RUN" == "false" ]]; then
-                        rm -f "$SESSION_FILE"
-                        echo "      → FIX: Cleaned up stale session"
-                        ((FIXED++))
-                    fi
-                else
-                    echo "      ✓ Session: $SESSION_NAME (PR #$SESSION_PR)"
-                fi
-            fi
-        else
-            echo "      ✓ No active session"
-        fi
-
-        # === CHECK 4: Orphaned PRs to integration ===
-        echo ""
-        echo "[4/7] Orphaned PRs"
-        if [[ -f "$SESSION_FILE" ]] && command -v gh >/dev/null 2>&1; then
-            orphaned_prs=$(gh pr list --base "$SESSION_BRANCH" --state open --json number,title 2>/dev/null | grep -c "number" || echo "0")
-            if [[ $orphaned_prs -gt 0 ]]; then
-                echo "      ⚠ ISSUE: $orphaned_prs open PR(s) to integration branch"
-                ((ISSUES++))
-                if [[ "$DRY_RUN" == "false" ]]; then
-                    # Try to merge safe PRs (those with tasks in DONE)
-                    gh pr list --base "$SESSION_BRANCH" --state open --json number,title 2>/dev/null | while read -r line; do
-                        pr_num=$(echo "$line" | grep -oP '"number":\K[0-9]+' | head -1)
-                        pr_title=$(echo "$line" | grep -oP '"title":"\K[^"]+')
-
-                        if [[ -n "$pr_num" ]]; then
-                            task_id=$(echo "$pr_title" | grep -oP '[A-Z]+-[0-9]+' | head -1)
-                            if [[ -n "$task_id" ]]; then
-                                in_done=$(awk -v id="$task_id" '/^## DONE$/,/^## /{if($0~id) print "yes"}' "$BACKLOG_FILE")
-                                if [[ -n "$in_done" ]]; then
-                                    echo "      → FIX: Merging PR #$pr_num (task $task_id in DONE)"
-                                    gh pr merge "$pr_num" --squash --delete-branch 2>/dev/null || echo "      → WARNING: Could not merge PR #$pr_num"
-                                    ((FIXED++))
-                                fi
-                            fi
-                        fi
-                    done
-                fi
-            else
-                echo "      ✓ OK"
-            fi
-        else
-            echo "      ✓ OK (no active session or gh CLI not available)"
-        fi
-
-        # === CHECK 5: Uncommitted changes ===
-        echo ""
-        echo "[5/7] Uncommitted changes"
-        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
-            uncommitted_count=$(git status --short | wc -l)
-            echo "      ⚠ ISSUE: $uncommitted_count uncommitted file(s)"
-            ((ISSUES++))
-            echo "      → MANUAL: Commit or stash before next run"
-        else
-            echo "      ✓ OK"
-        fi
-
-        # === CHECK 6: Unpushed commits ===
-        echo ""
-        echo "[6/7] Unpushed commits"
-        if [[ -f "$SESSION_FILE" ]] && [[ -n "$SESSION_BRANCH" ]]; then
-            current_branch=$(git branch --show-current)
-            if [[ "$current_branch" == "$SESSION_BRANCH" ]]; then
-                unpushed=$(git log @{u}..HEAD 2>/dev/null | wc -l)
-                if [[ $unpushed -gt 0 ]]; then
-                    echo "      ⚠ ISSUE: $unpushed unpushed commit(s) on $SESSION_BRANCH"
-                    ((ISSUES++))
-                    if [[ "$DRY_RUN" == "false" ]]; then
-                        git push origin "$SESSION_BRANCH" 2>/dev/null && {
-                            echo "      → FIX: Pushed commits to remote"
-                            ((FIXED++))
-                        } || echo "      → WARNING: Could not push commits"
-                    fi
-                else
-                    echo "      ✓ OK"
-                fi
-            else
-                echo "      ✓ OK (not on integration branch)"
-            fi
-        else
-            echo "      ✓ OK (no active session)"
-        fi
-
-        # === CHECK 7: Backlog drift ===
-        echo ""
-        echo "[7/7] Backlog drift"
-        if command -v gh >/dev/null 2>&1; then
-            # Get merged PRs with task IDs in title
-            merged_count=0
-            for task_id in $(grep -oP '### \K[A-Z]+-[0-9]+' "$BACKLOG_FILE" | head -20); do
-                # Check if task is NOT in DONE
-                in_done=$(awk -v id="$task_id" '/^## DONE$/,/^## /{if($0~id) print "yes"}' "$BACKLOG_FILE")
-                if [[ -z "$in_done" ]]; then
-                    # Check if there's a merged PR for this task
-                    pr_merged=$(gh pr list --state merged --search "$task_id" --limit 5 --json number 2>/dev/null | grep -c "number" || echo "0")
-                    if [[ $pr_merged -gt 0 ]]; then
-                        echo "      ⚠ ISSUE: $task_id has merged PR but not in DONE"
-                        ((ISSUES++))
-                        ((merged_count++))
-                        if [[ "$DRY_RUN" == "false" ]]; then
-                            # Move task to DONE
-                            pr_num=$(gh pr list --state merged --search "$task_id" --limit 1 --json number -q '.[0].number' 2>/dev/null)
-                            today=$(date +%Y-%m-%d)
-
-                            awk -v id="$task_id" -v pr="$pr_num" -v date="$today" '
-                                /^## DONE$/ { print; done_line=NR; next }
-                                /^## TODO$|^## IN_PROGRESS$/ { section=$0; in_section=1; next }
-                                in_section && $0 ~ id {
-                                    # Store task
-                                    task=$0
-                                    while ((getline line) > 0) {
-                                        if (line ~ /^### / || line ~ /^## /) break
-                                        task = task "\n" line
-                                    }
-                                    # Add to DONE
-                                    if (done_line && !task_moved) {
-                                        print section
-                                        print ""
-                                        next
-                                    }
-                                }
-                                NR == done_line + 1 && task {
-                                    print task " ✓"
-                                    print "- **Completed:** " date
-                                    if (pr) print "- **PR:** #" pr
-                                    print ""
-                                    task=""
-                                    task_moved=1
-                                }
-                                { print }
-                            ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
-                            echo "      → FIX: Moved $task_id to DONE"
-                            ((FIXED++))
-                        fi
-                    fi
-                fi
-            done
-
-            if [[ $merged_count -eq 0 ]]; then
-                echo "      ✓ OK"
-            fi
-        else
-            echo "      ⚠ WARNING: gh CLI not available, skipping check"
-        fi
-
-        # === SUMMARY ===
-        echo ""
-        echo "════════════════════════════════════════════════════════"
-        if [[ $ISSUES -eq 0 ]]; then
-            echo "✅ No issues found - integration branch ready for review"
-        elif [[ "$DRY_RUN" == "true" ]]; then
-            echo "📋 Summary: $ISSUES issue(s) found"
-            echo ""
-            echo "Run 'atlas review' (without --dry-run) to fix automatically"
-        else
-            manual=$((ISSUES - FIXED))
-            if [[ $manual -gt 0 ]]; then
-                echo "📋 Summary: $ISSUES issue(s) found, $FIXED fixed, $manual manual"
-            else
-                echo "✅ Summary: $ISSUES issue(s) found and fixed"
-            fi
-        fi
-
-        if [[ -f "$SESSION_FILE" ]] && [[ -n "$SESSION_BRANCH" ]] && [[ -n "$SESSION_PR" ]]; then
-            echo ""
-            echo "Integration: $SESSION_BRANCH"
-            echo "PR to main: #$SESSION_PR (Ready for Review)"
+            claude --dangerously-skip-permissions "$REVIEW_PROMPT"
         fi
 
         exit 0
