@@ -67,8 +67,16 @@ atlas 25
 cd your-project
 atlas init
 
-# Edit .atlas/backlog.md with your tasks
+# Recommended flow (AI plans + executes)
+atlas plan "add user authentication with JWT"
+atlas 5
+```
 
+If you prefer manual planning, you can still edit `.atlas/backlog.md` directly:
+
+```bash
+# Manual flow (you write tasks)
+# Edit .atlas/backlog.md with your tasks
 atlas
 ```
 
@@ -81,8 +89,8 @@ atlas
 | `atlas init` | Initialize `.atlas/` in current project |
 | `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
-| `atlas review [--dry-run]` | Audit and fix issues from Atlas iterations |
-| `atlas resume [N]` | Resume interrupted integration session |
+| `atlas review [--dry-run]` | Audit Atlas state and auto-fix inconsistencies (or report only with dry-run) |
+| `atlas resume [N]` | Resume an interrupted session from its active integration branch/PR |
 | `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
 | `atlas [--cli <provider>] [command or iterations]` | Run any command (or iteration loop) with a specific AI provider |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
