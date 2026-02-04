@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-02-04
+
+### Added
+- New `atlas clean` command:
+  - `atlas clean`: Removes runtime logs (`.atlas/runs/*.log`) and temp files (`.atlas/*.tmp`)
+  - `atlas clean --all`: Also resets `.atlas/activity.log`, `.atlas/errors.log`, and stale integration session metadata
+
+### Fixed
+- **Global flag parsing is now position-independent**:
+  - `--cli` now works before or after command tokens (e.g. `atlas review --cli opencode`)
+  - Commands now reject invalid mixed arguments consistently (`plan`, `resume`, `review`, `run`)
+- **`atlas review --dry-run` now works**:
+  - Enables report-only review mode with strict no-mutation instructions in the review prompt
+  - Works consistently with any provider and argument order
+- **Installer/update consistency fixes**:
+  - `install.sh` now downloads `review_prompt.md` (required by `atlas review`)
+  - Critical file checks now include `review_prompt.md` (install + update)
+  - Skills are now downloaded once and copied to all available CLIs (Claude/OpenCode/Codex) even if Claude is not installed
+- Fixed default branch detection in resume mode when `ATLAS_DEFAULT_BRANCH` is set
+
 ## [2.3.0] - 2026-02-04
 
 ### Changed
