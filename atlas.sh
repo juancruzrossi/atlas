@@ -7,7 +7,7 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="2.2.0"
+ATLAS_VERSION="2.2.1"
 
 # AI Provider configuration (claudecode | opencode)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -253,7 +253,7 @@ GITIGNORE
             export OPENCODE_PERMISSION='{"*":"allow"}'
             opencode run --agent plan "$PLAN_PROMPT"
         elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            codex exec --full-auto "$PLAN_PROMPT"
+            codex exec --yolo "$PLAN_PROMPT"
         else
             claude --dangerously-skip-permissions "$PLAN_PROMPT"
         fi
@@ -978,7 +978,7 @@ $PROMPT_CONTENT"
             export OPENCODE_PERMISSION='{"*":"allow"}'
             OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
         elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" codex exec --full-auto "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
+            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" codex exec --yolo "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
         else
             OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
         fi
