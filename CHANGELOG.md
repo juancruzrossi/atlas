@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-02-04
+
+### Fixed
+- **Codex flag syntax**: Changed from incorrect `--full-auto` to `--yolo` (official bypass flag)
+- Codex now runs with full permission bypass in both plan and execution modes
+
 ## [2.2.0] - 2026-02-04
 
 ### Added
