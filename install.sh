@@ -15,6 +15,7 @@ mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills" "
 curl -fsSL "$REPO_URL/atlas.sh" -o "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh" || true
 curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
 curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
+curl -fsSL "$REPO_URL/review_prompt.md" -o "$ATLAS_HOME/review_prompt.md" || true
 curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
 curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
 
@@ -27,13 +28,16 @@ for f in CONTEXT_ENGINEERING.md GUARDRAILS.md; do
 done
 
 SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
+for skill in $SKILLS; do
+    mkdir -p "$ATLAS_HOME/skills/$skill"
+    curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+done
 
 # Install to Claude Code if available
 if command -v claude >/dev/null 2>&1; then
     mkdir -p "${HOME}/.claude/skills"
     for skill in $SKILLS; do
-        mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.claude/skills/$skill"
-        curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+        mkdir -p "${HOME}/.claude/skills/$skill"
         if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
     done
 fi
@@ -42,9 +46,17 @@ fi
 if command -v opencode >/dev/null 2>&1; then
     mkdir -p "${HOME}/.config/opencode/skills"
     for skill in $SKILLS; do
-        mkdir -p "$ATLAS_HOME/skills/$skill" "${HOME}/.config/opencode/skills/$skill"
-        curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
+        mkdir -p "${HOME}/.config/opencode/skills/$skill"
         if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
+    done
+fi
+
+# Install to Codex if available
+if command -v codex >/dev/null 2>&1; then
+    mkdir -p "${HOME}/.codex/skills"
+    for skill in $SKILLS; do
+        mkdir -p "${HOME}/.codex/skills/$skill"
+        if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.codex/skills/$skill/"; fi
     done
 fi
 
@@ -52,7 +64,7 @@ rm -f "$BIN_DIR/atlas"
 ln -s "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas" 2>/dev/null || cp "$ATLAS_HOME/atlas.sh" "$BIN_DIR/atlas"
 
 MISSING=()
-for f in atlas.sh prompt.md plan_prompt.md CHANGELOG.md; do
+for f in atlas.sh prompt.md plan_prompt.md review_prompt.md CHANGELOG.md; do
     if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
 done
 

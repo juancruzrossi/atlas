@@ -16,6 +16,7 @@ Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates ta
 atlas.sh            Main entry point - orchestrates the iteration loop
 prompt.md           System prompt for autonomous iterations
 plan_prompt.md      System prompt for interactive planning mode
+review_prompt.md    System prompt for AI review mode
 notify-telegram.sh  Telegram notifications for iteration progress
 install.sh          Installer script for global installation
 templates/          Initial templates copied on `atlas init`
@@ -24,7 +25,7 @@ references/         Documentation about context engineering and guardrails
 
 **Core loop** (`atlas.sh`):
 1. Builds prompt with all context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
-2. Invokes the selected AI provider (claudecode or opencode) with the prompt
+2. Invokes the selected AI provider (claudecode, opencode, or codex) with the prompt
 3. Parses output for `<promise>COMPLETE</promise>` to exit early
 4. Logs iteration to `$RUNS_DIR` and optionally notifies Telegram
 
@@ -43,6 +44,9 @@ references/         Documentation about context engineering and guardrails
 atlas init          # Initialize .atlas/ in current project
 atlas plan "..."    # Interactive planning: interview → spec → tasks
 atlas [N]           # Run N iterations autonomously (default: 25)
+atlas review        # AI audit and repair for .atlas state
+atlas resume [N]    # Resume interrupted integration session
+atlas clean [--all] # Clean runtime files in .atlas/
 atlas update        # Update Atlas from GitHub (preserves project data)
 atlas help          # Show help
 ```
@@ -71,7 +75,7 @@ This is a pure bash project. No build step required.
 - `ATLAS_STALE_SECONDS` - Reset stuck tasks after N seconds (default: 7200)
 - `ATLAS_DEFAULT_BRANCH` - Override auto-detected default branch (default: auto)
 - `ATLAS_NOTIFY_TELEGRAM` - Enable Telegram notifications (default: true)
-- `ATLAS_CLI` - AI provider: claudecode (default) | opencode
+- `ATLAS_CLI` - AI provider: claudecode (default) | opencode | codex
 
 ## AI Provider Support
 
@@ -79,6 +83,7 @@ Atlas now supports multiple AI providers:
 
 - **Claude Code** (claudecode) - Default, best for interactive `atlas plan`
 - **OpenCode** (opencode) - Alternative for autonomous execution
+- **Codex** (codex) - Alternative provider for plan/review/run
 
 ### Implementation Details
 
@@ -91,7 +96,7 @@ The provider is selected via (in order of priority):
 
 When modifying provider-related code:
 - Maintain backward compatibility (default remains claudecode)
-- Skills are installed to both `~/.claude/skills/` and `~/.config/opencode/skills/`
+- Skills are installed to `~/.claude/skills/`, `~/.config/opencode/skills/`, and `~/.codex/skills/`
 - Validation happens early (fails fast if selected CLI not installed)
 - Use conditional invocation based on `ATLAS_CLI` variable
 
