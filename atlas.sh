@@ -259,13 +259,10 @@ GITIGNORE
             exit 1
         fi
 
-        # Verificar jq disponible
-        command -v jq &>/dev/null || { echo "Error: 'jq' required for session management."; exit 1; }
-
-        # Leer session data
-        SESSION_BRANCH=$(jq -r '.branch' "$SESSION_FILE" 2>/dev/null)
-        SESSION_PR=$(jq -r '.pr_number' "$SESSION_FILE" 2>/dev/null)
-        SESSION_NAME=$(jq -r '.session_name' "$SESSION_FILE" 2>/dev/null)
+        # Leer session data (parsing bash puro)
+        SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
+        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
+        SESSION_NAME=$(awk -F'"' '/"session_name"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
 
         # Validar datos
         [[ -z "$SESSION_PR" || "$SESSION_PR" == "null" ]] && { echo "❌ Invalid session file: missing pr_number"; exit 1; }
@@ -539,13 +536,13 @@ elif [[ -d "$PROJECT_DIR/.git" ]]; then
     git pull origin "$DEFAULT_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
 
     # Check for merged integration session and cleanup
-    if [[ -f ".atlas/integration-session.json" ]] && command -v jq &>/dev/null; then
-        SESSION_PR=$(jq -r '.pr_number' .atlas/integration-session.json 2>/dev/null)
+    if [[ -f ".atlas/integration-session.json" ]]; then
+        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
             PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
-                OLD_BRANCH=$(jq -r '.branch' .atlas/integration-session.json 2>/dev/null)
+                OLD_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
                 [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
                 rm -f .atlas/integration-session.json
                 echo "   ✓ Cleaned up. New session will be created."

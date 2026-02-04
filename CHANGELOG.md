@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-02-04
+
+### Changed
+- **Removed jq dependency**: `atlas resume` now uses bash-native `awk` for JSON parsing
+- No external dependencies required beyond core Unix tools (awk is POSIX standard)
+- Integration session cleanup also uses awk instead of jq
+
 ## [2.1.0] - 2026-02-04
 
 ### Added
