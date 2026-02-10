@@ -547,6 +547,55 @@ GITIGNORE
         fi
         exit 0
         ;;
+    doctor)
+        echo "=== Atlas Doctor ==="
+        echo ""
+        OK="[OK]" WARN="[WARN]" FAIL="[FAIL]"
+
+        # Check AI CLI
+        case "$ATLAS_CLI" in
+            claudecode) CLI_BIN="claude" ;;
+            opencode)   CLI_BIN="opencode" ;;
+            codex)      CLI_BIN="codex" ;;
+        esac
+        if command -v "$CLI_BIN" >/dev/null 2>&1; then
+            echo "$OK $ATLAS_CLI ($CLI_BIN found)"
+        else
+            echo "$FAIL $ATLAS_CLI ($CLI_BIN not found)"
+        fi
+
+        # Check prompts
+        for p in prompt.md plan_prompt.md review_prompt.md; do
+            if [[ -f "$ATLAS_HOME/$p" ]]; then
+                echo "$OK $p"
+            else
+                echo "$FAIL $p missing in $ATLAS_HOME"
+            fi
+        done
+
+        # Check envsubst
+        if command -v envsubst >/dev/null 2>&1; then
+            echo "$OK envsubst"
+        else
+            echo "$WARN envsubst not found (install gettext)"
+        fi
+
+        # Check git
+        if command -v git >/dev/null 2>&1; then
+            echo "$OK git ($(git --version | awk '{print $3}'))"
+        else
+            echo "$WARN git not found (local mode only)"
+        fi
+
+        # Check gh CLI
+        if command -v gh >/dev/null 2>&1; then
+            echo "$OK gh CLI ($(gh --version | head -1 | awk '{print $3}'))"
+        else
+            echo "$WARN gh CLI not found (no PR workflow)"
+        fi
+
+        exit 0
+        ;;
     help)
         print_help
         exit 0
