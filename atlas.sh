@@ -9,7 +9,7 @@ NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 # Atlas version
 ATLAS_VERSION="2.4.0"
 
-# AI Provider configuration (claudecode | opencode)
+# AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
 ATLAS_CLI="${ATLAS_CLI:-claudecode}"
 
@@ -236,7 +236,6 @@ case "$COMMAND" in
         fi
         if [[ ! -f "$PROGRESS_FILE" ]]; then
             cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE"
-            sed -i "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE" 2>/dev/null || sed -i '' "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE"
             echo "  Created: progress.txt"
         fi
         [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Created: guardrails.md"

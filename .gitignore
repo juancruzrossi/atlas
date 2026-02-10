@@ -11,8 +11,5 @@ errors_log.txt
 *.swp
 *.swo
 
-# State files (generated per-project)
-.atlas-state.json
-
 # Debug
 debug/
