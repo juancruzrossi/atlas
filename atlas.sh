@@ -7,9 +7,9 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="2.4.0"
+ATLAS_VERSION="2.5.0"
 
-# AI Provider configuration (claudecode | opencode)
+# AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
 ATLAS_CLI="${ATLAS_CLI:-claudecode}"
 
@@ -78,6 +78,61 @@ PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
 
+# Portable JSON value extractor (handles both string and integer values)
+json_get() {
+    local key="$1" file="$2"
+    [[ ! -f "$file" ]] && return
+    awk -v k="$key" '
+        $0 ~ ("\"" k "\"") {
+            sub(".*\"" k "\"[[:space:]]*:[[:space:]]*", "")
+            sub(/^"/, "")
+            sub(/".*/, "")
+            sub(/,.*/, "")
+            sub(/[[:space:]]*$/, "")
+            print; exit
+        }
+    ' "$file"
+}
+
+# Install Atlas skills to all available AI providers
+install_skills() {
+    [[ ! -d "$ATLAS_HOME/skills" ]] && return
+    local providers=()
+    command -v claude >/dev/null 2>&1 && providers+=("${HOME}/.claude/skills")
+    command -v opencode >/dev/null 2>&1 && providers+=("${HOME}/.config/opencode/skills")
+    command -v codex >/dev/null 2>&1 && providers+=("${HOME}/.codex/skills")
+    for target_dir in "${providers[@]}"; do
+        mkdir -p "$target_dir"
+        for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
+            [[ ! -d "$skill_dir" ]] && continue
+            local skill_name
+            skill_name=$(basename "$skill_dir")
+            mkdir -p "$target_dir/$skill_name"
+            cp -r "$skill_dir"/* "$target_dir/$skill_name/" 2>/dev/null || true
+        done
+        echo "  Installed: Atlas skills to $target_dir/"
+    done
+}
+
+# Invoke the selected AI provider with a prompt
+# Usage: run_provider <mode> <prompt>
+# Modes: plan, review, build (opencode agent names; ignored by codex/claude)
+run_provider() {
+    local mode="$1" prompt="$2"
+    case "$ATLAS_CLI" in
+        opencode)
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            opencode run --agent "$mode" "$prompt"
+            ;;
+        codex)
+            codex exec --yolo "$prompt"
+            ;;
+        *)
+            claude --dangerously-skip-permissions "$prompt"
+            ;;
+    esac
+}
+
 # Cross-platform timeout function
 run_with_timeout() {
     local timeout_seconds=$1
@@ -111,6 +166,8 @@ print_help() {
     echo "  atlas review [--dry-run]    Audit issues (and optionally auto-fix)"
     echo "  atlas resume [iterations]   Resume interrupted integration session"
     echo "  atlas clean [--all]         Clean runtime artifacts from .atlas/"
+    echo "  atlas status                Show task counts and session info"
+    echo "  atlas doctor                Check Atlas installation and dependencies"
     echo "  atlas update                Update Atlas from GitHub (preserves your data)"
     echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
     echo ""
@@ -150,7 +207,7 @@ if [[ "$SHOW_HELP" == "true" ]]; then
     COMMAND="help"
 elif [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]]; then
     COMMAND="run"
-elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
+elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "status" || "${POSITIONAL_ARGS[0]}" == "doctor" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
     COMMAND="${POSITIONAL_ARGS[0]}"
     COMMAND_ARGS=("${POSITIONAL_ARGS[@]:1}")
 elif [[ "${POSITIONAL_ARGS[0]}" =~ ^[0-9]+$ ]]; then
@@ -181,7 +238,6 @@ case "$COMMAND" in
         fi
         if [[ ! -f "$PROGRESS_FILE" ]]; then
             cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE"
-            sed -i "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE" 2>/dev/null || sed -i '' "s/YYYY-MM-DD/$(date +%Y-%m-%d)/" "$PROGRESS_FILE"
             echo "  Created: progress.txt"
         fi
         [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Created: guardrails.md"
@@ -202,41 +258,7 @@ GITIGNORE
         fi
         [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
 
-        # Install Atlas skills to available AI providers only
-        if [[ -d "$ATLAS_HOME/skills" ]]; then
-            # Install to Claude Code if available
-            if command -v claude >/dev/null 2>&1; then
-                mkdir -p "${HOME}/.claude/skills"
-                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                    skill_name=$(basename "$skill_dir")
-                    mkdir -p "${HOME}/.claude/skills/$skill_name"
-                    cp -r "$skill_dir"/* "${HOME}/.claude/skills/$skill_name/" 2>/dev/null || true
-                done
-                echo "  Installed: Atlas skills to ~/.claude/skills/"
-            fi
-            
-            # Install to OpenCode if available
-            if command -v opencode >/dev/null 2>&1; then
-                mkdir -p "${HOME}/.config/opencode/skills"
-                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                    skill_name=$(basename "$skill_dir")
-                    mkdir -p "${HOME}/.config/opencode/skills/$skill_name"
-                    cp -r "$skill_dir"/* "${HOME}/.config/opencode/skills/$skill_name/" 2>/dev/null || true
-                done
-                echo "  Installed: Atlas skills to ~/.config/opencode/skills/"
-            fi
-
-            # Install to Codex if available
-            if command -v codex >/dev/null 2>&1; then
-                mkdir -p "${HOME}/.codex/skills"
-                for skill_dir in "$ATLAS_HOME/skills"/atlas-*; do
-                    skill_name=$(basename "$skill_dir")
-                    mkdir -p "${HOME}/.codex/skills/$skill_name"
-                    cp -r "$skill_dir"/* "${HOME}/.codex/skills/$skill_name/" 2>/dev/null || true
-                done
-                echo "  Installed: Atlas skills to ~/.codex/skills/"
-            fi
-        fi
+        install_skills
 
         echo "✓ Initialized .atlas/ in $PROJECT_DIR"
         exit 0
@@ -267,32 +289,7 @@ GITIGNORE
             curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
         done
         
-        # Install to Claude Code if available
-        if command -v claude >/dev/null 2>&1; then
-            mkdir -p "${HOME}/.claude/skills"
-            for skill in $SKILLS; do
-                mkdir -p "${HOME}/.claude/skills/$skill"
-                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.claude/skills/$skill/"; fi
-            done
-        fi
-        
-        # Install to OpenCode if available
-        if command -v opencode >/dev/null 2>&1; then
-            mkdir -p "${HOME}/.config/opencode/skills"
-            for skill in $SKILLS; do
-                mkdir -p "${HOME}/.config/opencode/skills/$skill"
-                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.config/opencode/skills/$skill/"; fi
-            done
-        fi
-
-        # Install to Codex if available
-        if command -v codex >/dev/null 2>&1; then
-            mkdir -p "${HOME}/.codex/skills"
-            for skill in $SKILLS; do
-                mkdir -p "${HOME}/.codex/skills/$skill"
-                if [[ -f "$ATLAS_HOME/skills/$skill/SKILL.md" ]]; then cp "$ATLAS_HOME/skills/$skill/SKILL.md" "${HOME}/.codex/skills/$skill/"; fi
-            done
-        fi
+        install_skills
 
         ATLAS_BIN=$(which atlas 2>/dev/null || true)
         if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
@@ -325,6 +322,13 @@ GITIGNORE
         [[ ${#COMMAND_ARGS[@]} -eq 0 ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
+        if [[ "$ATLAS_CLI" != "claudecode" ]]; then
+            echo "Warning: 'atlas plan' works best with Claude Code (interactive mode)."
+            echo "Current provider: $ATLAS_CLI"
+            read -r -p "Continue anyway? [y/N] " confirm
+            [[ "$confirm" != [yY] ]] && { echo "Aborted."; exit 0; }
+        fi
+
         mkdir -p "$ATLAS_DIR/specs"
         SPEC_FILE="$ATLAS_DIR/specs/spec-$(date +%Y%m%d-%H%M%S).md"
 
@@ -342,14 +346,7 @@ GITIGNORE
         log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
         log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
 
-        if [[ "$ATLAS_CLI" == "opencode" ]]; then
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            opencode run --agent plan "$PLAN_PROMPT"
-        elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            codex exec --yolo "$PLAN_PROMPT"
-        else
-            claude --dangerously-skip-permissions "$PLAN_PROMPT"
-        fi
+        run_provider plan "$PLAN_PROMPT"
 
         exit 0
         ;;
@@ -369,9 +366,9 @@ GITIGNORE
             exit 1
         fi
 
-        SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-        SESSION_NAME=$(awk -F'"' '/"session_name"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
+        SESSION_BRANCH=$(json_get "branch" "$SESSION_FILE")
+        SESSION_PR=$(json_get "pr_number" "$SESSION_FILE")
+        SESSION_NAME=$(json_get "session_name" "$SESSION_FILE")
 
         [[ -z "$SESSION_PR" || "$SESSION_PR" == "null" ]] && { echo "❌ Invalid session file: missing pr_number"; exit 1; }
         [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" ]] && { echo "❌ Invalid session file: missing branch"; exit 1; }
@@ -454,10 +451,7 @@ GITIGNORE
         echo "   Mode: $REVIEW_MODE_LABEL"
         echo ""
 
-        if [[ "$ATLAS_CLI" == "opencode" ]]; then
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            opencode run --agent review "$REVIEW_PROMPT"
-        elif [[ "$ATLAS_CLI" == "codex" ]]; then
+        if [[ "$ATLAS_CLI" == "codex" ]]; then
             mkdir -p "$RUNS_DIR"
             REVIEW_RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
             REVIEW_LOG_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG.log"
@@ -473,7 +467,7 @@ GITIGNORE
                 exit 1
             fi
         else
-            claude --dangerously-skip-permissions "$REVIEW_PROMPT"
+            run_provider review "$REVIEW_PROMPT"
         fi
 
         exit 0
@@ -496,8 +490,8 @@ GITIGNORE
         SESSION_STATUS="not-found"
         if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
             SESSION_STATUS="kept"
-            SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
-            SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
+            SESSION_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
+            SESSION_BRANCH=$(json_get "branch" "$ATLAS_DIR/integration-session.json")
             PR_STATE="UNKNOWN"
             if command -v gh >/dev/null 2>&1 && [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
                 PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
@@ -522,6 +516,91 @@ GITIGNORE
         echo "   Removed temp files: $TMP_FILES_REMOVED"
         echo "   Integration session: $SESSION_STATUS"
         [[ "$CLEAN_ALL" == "true" ]] && echo "   Reset activity/errors logs: yes"
+        exit 0
+        ;;
+    status)
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+
+        # Reuse count_tasks (defined later, but we need it here)
+        local_count() {
+            local file="$1" in_section="" todo=0 ip=0 done=0
+            while IFS= read -r line; do
+                if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
+                    in_section="${BASH_REMATCH[1]}"
+                    [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
+                elif [[ "$line" =~ ^###[[:space:]] ]]; then
+                    case "$in_section" in TODO) ((todo++)) ;; IN_PROGRESS) ((ip++)) ;; DONE) ((done++)) ;; esac
+                fi
+            done < "$file"
+            echo "$todo $ip $done"
+        }
+
+        read TODO_N IP_N DONE_N <<< $(local_count "$BACKLOG_FILE")
+
+        echo "Atlas Status - $PROJECT_NAME"
+        echo ""
+        echo "Tasks:  TODO=$TODO_N  IN_PROGRESS=$IP_N  DONE=$DONE_N"
+
+        if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
+            S_NAME=$(json_get "session_name" "$ATLAS_DIR/integration-session.json")
+            S_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
+            echo "Session: $S_NAME (PR #$S_PR)"
+        else
+            echo "Session: none"
+        fi
+
+        if [[ -d ".git" ]]; then
+            echo "Branch:  $(git branch --show-current 2>/dev/null || echo 'N/A')"
+        fi
+        exit 0
+        ;;
+    doctor)
+        echo "=== Atlas Doctor ==="
+        echo ""
+        OK="[OK]" WARN="[WARN]" FAIL="[FAIL]"
+
+        # Check AI CLI
+        case "$ATLAS_CLI" in
+            claudecode) CLI_BIN="claude" ;;
+            opencode)   CLI_BIN="opencode" ;;
+            codex)      CLI_BIN="codex" ;;
+        esac
+        if command -v "$CLI_BIN" >/dev/null 2>&1; then
+            echo "$OK $ATLAS_CLI ($CLI_BIN found)"
+        else
+            echo "$FAIL $ATLAS_CLI ($CLI_BIN not found)"
+        fi
+
+        # Check prompts
+        for p in prompt.md plan_prompt.md review_prompt.md; do
+            if [[ -f "$ATLAS_HOME/$p" ]]; then
+                echo "$OK $p"
+            else
+                echo "$FAIL $p missing in $ATLAS_HOME"
+            fi
+        done
+
+        # Check envsubst
+        if command -v envsubst >/dev/null 2>&1; then
+            echo "$OK envsubst"
+        else
+            echo "$WARN envsubst not found (install gettext)"
+        fi
+
+        # Check git
+        if command -v git >/dev/null 2>&1; then
+            echo "$OK git ($(git --version | awk '{print $3}'))"
+        else
+            echo "$WARN git not found (local mode only)"
+        fi
+
+        # Check gh CLI
+        if command -v gh >/dev/null 2>&1; then
+            echo "$OK gh CLI ($(gh --version | head -1 | awk '{print $3}'))"
+        else
+            echo "$WARN gh CLI not found (no PR workflow)"
+        fi
+
         exit 0
         ;;
     help)
@@ -568,13 +647,16 @@ case "$ATLAS_CLI" in
         ;;
 esac
 
-MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
+if [[ -z "${MAX_ITERATIONS:-}" ]]; then
+    MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
+fi
 STALE_SECONDS="${ATLAS_STALE_SECONDS:-$DEFAULT_STALE_SECONDS}"
 TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
 [[ -n "${RUN_ITERATIONS_OVERRIDE:-}" ]] && MAX_ITERATIONS="$RUN_ITERATIONS_OVERRIDE"
 
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 [[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
+[[ ! -f "$ATLAS_HOME/prompt.md" ]] && { echo "Error: prompt.md not found in $ATLAS_HOME. Run 'atlas update' first."; exit 1; }
 mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
@@ -583,35 +665,39 @@ log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
 reset_stale_tasks() {
     [[ "$STALE_SECONDS" -eq 0 ]] && return
 
-    # Check if there's a task in IN_PROGRESS
-    local in_progress_task=$(sed -n '/^## IN_PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
+    # Quick check: any ### task under IN_PROGRESS?
+    local in_progress_task
+    in_progress_task=$(awk '/^## IN.PROGRESS/{f=1;next} /^## /{f=0} f && /^### /{print;exit}' "$BACKLOG_FILE")
     [[ -z "$in_progress_task" ]] && return
 
-    # Find most recent run log to determine age
-    local latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
+    # Check staleness via most recent run log
+    local latest_run
+    latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
     [[ -z "$latest_run" ]] && return
 
-    local last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
-    local now=$(date +%s)
-    local age=$((now - last_mod))
+    local last_mod now age
+    last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+    now=$(date +%s)
+    age=$((now - last_mod))
 
     [[ "$age" -le "$STALE_SECONDS" ]] && return
 
     echo "⚠️  Stale task in IN_PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
     echo "   Resetting to TODO..."
 
-    # Extract full task block from IN_PROGRESS
-    local task_block=$(sed -n '/^## IN_PROGRESS$/,/^## DONE$/{/^## /d;p;}' "$BACKLOG_FILE")
-    [[ -z "$task_block" ]] && return
-
-    # Create temp file with task moved back to TODO (insert before IN_PROGRESS)
-    awk -v task="$task_block" '
-        /^## IN_PROGRESS$/ { print task; print ""; print; in_progress=1; next }
-        /^## DONE$/ { in_progress=0 }
-        in_progress && /^### / { next }
-        in_progress && /^- \*\*/ { next }
-        in_progress && /^  [0-9]+\./ { next }
+    # Block-based rewrite: collect IN_PROGRESS content and insert before its header
+    awk '
+        /^## IN.PROGRESS/ { ip_header = $0; in_ip = 1; next }
+        in_ip && /^## / {
+            printf "%s", ip_content
+            print ip_header
+            print ""
+            in_ip = 0
+            print; next
+        }
+        in_ip { ip_content = ip_content $0 "\n"; next }
         { print }
+        END { if (in_ip) { printf "%s", ip_content; print ip_header } }
     ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
 
     log_activity "STALE RESET: Moved task back to TODO after ${age}s"
@@ -739,12 +825,12 @@ elif [[ -d "$PROJECT_DIR/.git" ]]; then
 
     # Check for merged integration session and cleanup
     if [[ -f ".atlas/integration-session.json" ]]; then
-        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
+        SESSION_PR=$(json_get "pr_number" .atlas/integration-session.json)
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
             PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
-                OLD_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
+                OLD_BRANCH=$(json_get "branch" .atlas/integration-session.json)
                 [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
                 rm -f .atlas/integration-session.json
                 echo "   ✓ Cleaned up. New session will be created."

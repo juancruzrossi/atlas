@@ -92,6 +92,8 @@ atlas
 | `atlas review [--dry-run]` | Audit Atlas state and auto-fix inconsistencies (or report only with dry-run) |
 | `atlas resume [N]` | Resume an interrupted session from its active integration branch/PR |
 | `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
+| `atlas status` | Show task counts and active session info |
+| `atlas doctor` | Check Atlas installation and dependencies |
 | `atlas [--cli <provider>] [command or iterations]` | Run any command (or iteration loop) with a specific AI provider |
 | `atlas update` | Update Atlas from GitHub (preserves your project data) |
 | `atlas help` | Show help |

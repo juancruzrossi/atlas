@@ -41,18 +41,18 @@ git checkout main && git pull origin main
 
 # 2. Check for existing session
 if [[ -f .atlas/integration-session.json ]]; then
-  PR_NUMBER=$(jq -r '.pr_number' .atlas/integration-session.json)
+  PR_NUMBER=$(grep '"pr_number"' .atlas/integration-session.json | sed 's/[^0-9]//g')
   PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q '.state')
 
   if [[ "$PR_STATE" == "MERGED" ]]; then
     # Session was merged - cleanup locally and create new
-    BRANCH=$(jq -r '.branch' .atlas/integration-session.json)
+    BRANCH=$(grep '"branch"' .atlas/integration-session.json | sed 's/.*"branch"[[:space:]]*:[[:space:]]*"//;s/".*//')
     git branch -D "$BRANCH" 2>/dev/null || true  # Delete local branch
     rm .atlas/integration-session.json  # Delete locally (no commit to main - it's protected)
     # Continue to create new session below
   else
     # Session still active - use it
-    BASE_BRANCH=$(jq -r '.branch' .atlas/integration-session.json)
+    BASE_BRANCH=$(grep '"branch"' .atlas/integration-session.json | sed 's/.*"branch"[[:space:]]*:[[:space:]]*"//;s/".*//')
     git checkout "$BASE_BRANCH" && git pull origin "$BASE_BRANCH"
     # Skip to step 1
   fi
