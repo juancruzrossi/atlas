@@ -166,6 +166,8 @@ print_help() {
     echo "  atlas review [--dry-run]    Audit issues (and optionally auto-fix)"
     echo "  atlas resume [iterations]   Resume interrupted integration session"
     echo "  atlas clean [--all]         Clean runtime artifacts from .atlas/"
+    echo "  atlas status                Show task counts and session info"
+    echo "  atlas doctor                Check Atlas installation and dependencies"
     echo "  atlas update                Update Atlas from GitHub (preserves your data)"
     echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
     echo ""
@@ -205,7 +207,7 @@ if [[ "$SHOW_HELP" == "true" ]]; then
     COMMAND="help"
 elif [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]]; then
     COMMAND="run"
-elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
+elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "status" || "${POSITIONAL_ARGS[0]}" == "doctor" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
     COMMAND="${POSITIONAL_ARGS[0]}"
     COMMAND_ARGS=("${POSITIONAL_ARGS[@]:1}")
 elif [[ "${POSITIONAL_ARGS[0]}" =~ ^[0-9]+$ ]]; then
@@ -507,6 +509,42 @@ GITIGNORE
         echo "   Removed temp files: $TMP_FILES_REMOVED"
         echo "   Integration session: $SESSION_STATUS"
         [[ "$CLEAN_ALL" == "true" ]] && echo "   Reset activity/errors logs: yes"
+        exit 0
+        ;;
+    status)
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+
+        # Reuse count_tasks (defined later, but we need it here)
+        local_count() {
+            local file="$1" in_section="" todo=0 ip=0 done=0
+            while IFS= read -r line; do
+                if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
+                    in_section="${BASH_REMATCH[1]}"
+                    [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
+                elif [[ "$line" =~ ^###[[:space:]] ]]; then
+                    case "$in_section" in TODO) ((todo++)) ;; IN_PROGRESS) ((ip++)) ;; DONE) ((done++)) ;; esac
+                fi
+            done < "$file"
+            echo "$todo $ip $done"
+        }
+
+        read TODO_N IP_N DONE_N <<< $(local_count "$BACKLOG_FILE")
+
+        echo "Atlas Status - $PROJECT_NAME"
+        echo ""
+        echo "Tasks:  TODO=$TODO_N  IN_PROGRESS=$IP_N  DONE=$DONE_N"
+
+        if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
+            S_NAME=$(json_get "session_name" "$ATLAS_DIR/integration-session.json")
+            S_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
+            echo "Session: $S_NAME (PR #$S_PR)"
+        else
+            echo "Session: none"
+        fi
+
+        if [[ -d ".git" ]]; then
+            echo "Branch:  $(git branch --show-current 2>/dev/null || echo 'N/A')"
+        fi
         exit 0
         ;;
     help)
