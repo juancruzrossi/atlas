@@ -39,7 +39,7 @@ TIMESTAMP=$(date "+%H:%M")
 # Extract fields from summary
 TASK_LINE=$(echo "$SUMMARY" | grep -E "^Task:" | head -1)
 STATUS_LINE=$(echo "$SUMMARY" | grep -E "^Status:" | head -1)
-PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pending:" | head -1)
+PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pending:" | tail -1)
 
 # Clean values
 TASK=$(echo "$TASK_LINE" | sed 's/^Task: *//')
