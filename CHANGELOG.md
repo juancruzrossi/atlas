@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.5.0] - 2026-02-10
 
 ### Added
-- **`atlas status` command**: Shows task counts (TODO/IN_PROGRESS/DONE/DELAYED), active session info, and current git branch
+- **`atlas status` command**: Shows task counts (TODO/IN_PROGRESS/DONE), active session info, and current git branch
 - **`atlas doctor` command**: Diagnostic check for AI CLI, prompt files, envsubst, git, and gh CLI availability
 - **Warning for `atlas plan` with non-interactive providers**: Shows confirmation prompt when using opencode or codex (which lack interactive interview support)
 
