@@ -593,6 +593,7 @@ TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
 
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 [[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
+[[ ! -f "$ATLAS_HOME/prompt.md" ]] && { echo "Error: prompt.md not found in $ATLAS_HOME. Run 'atlas update' first."; exit 1; }
 mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
