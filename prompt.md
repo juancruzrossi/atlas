@@ -29,27 +29,17 @@ Do NOT skip this step. Read files in parallel for efficiency.
 ## Algorithm
 
 ```
-0. IF GIT_MODE=true:
-   - FIRST: git checkout main && git pull origin main  ← ALWAYS start from main
+0. IF GIT_MODE=true (atlas.sh already checked out main and cleaned merged sessions):
    - IF .atlas/integration-session.json exists:
-     - PR_NUMBER = read 'pr_number' from JSON
-     - PR_STATE = gh pr view $PR_NUMBER --json state -q '.state'
-     - IF PR_STATE="MERGED":
-       - Delete local integration branch: git branch -D integration/... (ignore errors)
-       - Delete session file locally: rm .atlas/integration-session.json
-       - (NO commit - main is likely protected; new session will have its own JSON)
-       → Continue to create new session below
-     - ELSE (PR still open):
-       - BASE_BRANCH = read 'branch' from JSON
-       - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
-       → Skip to step 1
-   - Create new session (no session file OR session was cleaned up):
+     - BASE_BRANCH = read 'branch' from JSON
+     - git checkout $BASE_BRANCH && git pull origin $BASE_BRANCH
+     → Skip to step 1
+   - ELSE (no session file - create new):
      - SESSION_NAME = "atlas-$(date +%Y%m%d-%H%M%S)"
      - BASE_BRANCH = "integration/$SESSION_NAME"
      - git checkout -b $BASE_BRANCH && git push -u origin $BASE_BRANCH
-     - **CRITICAL**: Create PR to main IMMEDIATELY after creating branch (Ready for Review, NOT draft):
+     - Create PR to main (Ready for Review, NOT draft):
        gh pr create --base main --title "🔄 Integration: $SESSION_NAME" --body "..."
-     - Capture PR_NUMBER from gh pr create output
      - Save .atlas/integration-session.json with session_name, branch, pr_number, status=active
      - git add .atlas/ && git commit -m "chore: init integration session" && git push
 

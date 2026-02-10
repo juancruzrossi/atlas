@@ -105,6 +105,7 @@ When modifying provider-related code:
 - Conventional Commits in English
 - Prompt changes: edit `prompt.md`, keep algorithm section in sync with `atlas.sh`
 - Template changes: edit files in `templates/`, they're copied on `atlas init`
+- **CLAUDE.md and AGENTS.md must stay in sync** (identical content, different filenames for different providers)
 
 ## GitFlow & Releases
 

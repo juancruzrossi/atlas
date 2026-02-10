@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-02-10
+
+### Added
+- **`atlas status` command**: Shows task counts (TODO/IN_PROGRESS/DONE), active session info, and current git branch
+- **`atlas doctor` command**: Diagnostic check for AI CLI, prompt files, envsubst, git, and gh CLI availability
+- **Warning for `atlas plan` with non-interactive providers**: Shows confirmation prompt when using opencode or codex (which lack interactive interview support)
+
+### Fixed
+- **JSON parsing for integers**: New `json_get()` helper handles both string and integer JSON values (fixes `pr_number` extraction)
+- **`atlas resume` now respects iteration count**: `atlas resume 5` correctly limits to 5 iterations instead of ignoring the argument
+- **Removed broken symlink**: Cleaned up `atlas` symlink pointing to non-existent Ubuntu path
+- **`prompt.md` validation**: Fails early with clear message if prompt.md is missing instead of cryptic envsubst error
+- **`jq` removed from skills**: `atlas-integration-flow` skill now uses grep/sed instead of requiring jq
+- **Telegram pending count**: Fixed `head -1` → `tail -1` to read bash-verified count instead of first line
+
+### Changed
+- **Simplified Step 0 in prompt.md**: Removed duplicated logic already handled by atlas.sh (~10 lines saved)
+- **DRY skills installation**: New `install_skills()` function auto-detects available providers (~39 lines saved)
+- **Centralized provider invocation**: New `run_provider()` function for plan/review commands (~20 lines saved)
+- **Robust stale task reset**: Block-based awk state machine handles `IN_PROGRESS` and `IN PROGRESS` variants
+- **Housekeeping**: Fixed CLI comment, cleaned .gitignore, removed dead sed, added CLAUDE.md/AGENTS.md sync note
+
 ## [2.4.1] - 2026-02-04
 
 ### Fixed
