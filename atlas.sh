@@ -78,6 +78,22 @@ PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
 
+# Portable JSON value extractor (handles both string and integer values)
+json_get() {
+    local key="$1" file="$2"
+    [[ ! -f "$file" ]] && return
+    awk -v k="$key" '
+        $0 ~ ("\"" k "\"") {
+            sub(".*\"" k "\"[[:space:]]*:[[:space:]]*", "")
+            sub(/^"/, "")
+            sub(/".*/, "")
+            sub(/,.*/, "")
+            sub(/[[:space:]]*$/, "")
+            print; exit
+        }
+    ' "$file"
+}
+
 # Cross-platform timeout function
 run_with_timeout() {
     local timeout_seconds=$1
@@ -369,9 +385,9 @@ GITIGNORE
             exit 1
         fi
 
-        SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
-        SESSION_NAME=$(awk -F'"' '/"session_name"/ {print $4; exit}' "$SESSION_FILE" 2>/dev/null)
+        SESSION_BRANCH=$(json_get "branch" "$SESSION_FILE")
+        SESSION_PR=$(json_get "pr_number" "$SESSION_FILE")
+        SESSION_NAME=$(json_get "session_name" "$SESSION_FILE")
 
         [[ -z "$SESSION_PR" || "$SESSION_PR" == "null" ]] && { echo "❌ Invalid session file: missing pr_number"; exit 1; }
         [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" ]] && { echo "❌ Invalid session file: missing branch"; exit 1; }
@@ -496,8 +512,8 @@ GITIGNORE
         SESSION_STATUS="not-found"
         if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
             SESSION_STATUS="kept"
-            SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
-            SESSION_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' "$ATLAS_DIR/integration-session.json" 2>/dev/null)
+            SESSION_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
+            SESSION_BRANCH=$(json_get "branch" "$ATLAS_DIR/integration-session.json")
             PR_STATE="UNKNOWN"
             if command -v gh >/dev/null 2>&1 && [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
                 PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
@@ -739,12 +755,12 @@ elif [[ -d "$PROJECT_DIR/.git" ]]; then
 
     # Check for merged integration session and cleanup
     if [[ -f ".atlas/integration-session.json" ]]; then
-        SESSION_PR=$(awk -F'"' '/"pr_number"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
+        SESSION_PR=$(json_get "pr_number" .atlas/integration-session.json)
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
             PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
-                OLD_BRANCH=$(awk -F'"' '/"branch"/ {print $4; exit}' .atlas/integration-session.json 2>/dev/null)
+                OLD_BRANCH=$(json_get "branch" .atlas/integration-session.json)
                 [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
                 rm -f .atlas/integration-session.json
                 echo "   ✓ Cleaned up. New session will be created."
