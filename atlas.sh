@@ -322,6 +322,13 @@ GITIGNORE
         [[ ${#COMMAND_ARGS[@]} -eq 0 ]] && { echo "Usage: atlas plan <feature description>"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
+        if [[ "$ATLAS_CLI" != "claudecode" ]]; then
+            echo "Warning: 'atlas plan' works best with Claude Code (interactive mode)."
+            echo "Current provider: $ATLAS_CLI"
+            read -r -p "Continue anyway? [y/N] " confirm
+            [[ "$confirm" != [yY] ]] && { echo "Aborted."; exit 0; }
+        fi
+
         mkdir -p "$ATLAS_DIR/specs"
         SPEC_FILE="$ATLAS_DIR/specs/spec-$(date +%Y%m%d-%H%M%S).md"
 
