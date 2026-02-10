@@ -114,6 +114,25 @@ install_skills() {
     done
 }
 
+# Invoke the selected AI provider with a prompt
+# Usage: run_provider <mode> <prompt>
+# Modes: plan, review, build (opencode agent names; ignored by codex/claude)
+run_provider() {
+    local mode="$1" prompt="$2"
+    case "$ATLAS_CLI" in
+        opencode)
+            export OPENCODE_PERMISSION='{"*":"allow"}'
+            opencode run --agent "$mode" "$prompt"
+            ;;
+        codex)
+            codex exec --yolo "$prompt"
+            ;;
+        *)
+            claude --dangerously-skip-permissions "$prompt"
+            ;;
+    esac
+}
+
 # Cross-platform timeout function
 run_with_timeout() {
     local timeout_seconds=$1
@@ -319,14 +338,7 @@ GITIGNORE
         log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
         log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
 
-        if [[ "$ATLAS_CLI" == "opencode" ]]; then
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            opencode run --agent plan "$PLAN_PROMPT"
-        elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            codex exec --yolo "$PLAN_PROMPT"
-        else
-            claude --dangerously-skip-permissions "$PLAN_PROMPT"
-        fi
+        run_provider plan "$PLAN_PROMPT"
 
         exit 0
         ;;
@@ -431,10 +443,7 @@ GITIGNORE
         echo "   Mode: $REVIEW_MODE_LABEL"
         echo ""
 
-        if [[ "$ATLAS_CLI" == "opencode" ]]; then
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            opencode run --agent review "$REVIEW_PROMPT"
-        elif [[ "$ATLAS_CLI" == "codex" ]]; then
+        if [[ "$ATLAS_CLI" == "codex" ]]; then
             mkdir -p "$RUNS_DIR"
             REVIEW_RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
             REVIEW_LOG_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG.log"
@@ -450,7 +459,7 @@ GITIGNORE
                 exit 1
             fi
         else
-            claude --dangerously-skip-permissions "$REVIEW_PROMPT"
+            run_provider review "$REVIEW_PROMPT"
         fi
 
         exit 0
