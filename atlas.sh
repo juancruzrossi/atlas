@@ -572,35 +572,39 @@ log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
 reset_stale_tasks() {
     [[ "$STALE_SECONDS" -eq 0 ]] && return
 
-    # Check if there's a task in IN_PROGRESS
-    local in_progress_task=$(sed -n '/^## IN_PROGRESS$/,/^## /{/^### /p;}' "$BACKLOG_FILE" | head -1)
+    # Quick check: any ### task under IN_PROGRESS?
+    local in_progress_task
+    in_progress_task=$(awk '/^## IN.PROGRESS/{f=1;next} /^## /{f=0} f && /^### /{print;exit}' "$BACKLOG_FILE")
     [[ -z "$in_progress_task" ]] && return
 
-    # Find most recent run log to determine age
-    local latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
+    # Check staleness via most recent run log
+    local latest_run
+    latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
     [[ -z "$latest_run" ]] && return
 
-    local last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
-    local now=$(date +%s)
-    local age=$((now - last_mod))
+    local last_mod now age
+    last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+    now=$(date +%s)
+    age=$((now - last_mod))
 
     [[ "$age" -le "$STALE_SECONDS" ]] && return
 
     echo "⚠️  Stale task in IN_PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
     echo "   Resetting to TODO..."
 
-    # Extract full task block from IN_PROGRESS
-    local task_block=$(sed -n '/^## IN_PROGRESS$/,/^## DONE$/{/^## /d;p;}' "$BACKLOG_FILE")
-    [[ -z "$task_block" ]] && return
-
-    # Create temp file with task moved back to TODO (insert before IN_PROGRESS)
-    awk -v task="$task_block" '
-        /^## IN_PROGRESS$/ { print task; print ""; print; in_progress=1; next }
-        /^## DONE$/ { in_progress=0 }
-        in_progress && /^### / { next }
-        in_progress && /^- \*\*/ { next }
-        in_progress && /^  [0-9]+\./ { next }
+    # Block-based rewrite: collect IN_PROGRESS content and insert before its header
+    awk '
+        /^## IN.PROGRESS/ { ip_header = $0; in_ip = 1; next }
+        in_ip && /^## / {
+            printf "%s", ip_content
+            print ip_header
+            print ""
+            in_ip = 0
+            print; next
+        }
+        in_ip { ip_content = ip_content $0 "\n"; next }
         { print }
+        END { if (in_ip) { printf "%s", ip_content; print ip_header } }
     ' "$BACKLOG_FILE" > "$BACKLOG_FILE.tmp" && mv "$BACKLOG_FILE.tmp" "$BACKLOG_FILE"
 
     log_activity "STALE RESET: Moved task back to TODO after ${age}s"
