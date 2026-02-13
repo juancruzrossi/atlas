@@ -110,7 +110,7 @@ install_skills() {
             mkdir -p "$target_dir/$skill_name"
             cp -r "$skill_dir"/* "$target_dir/$skill_name/" 2>/dev/null || true
         done
-        echo "  Installed: Atlas skills to $target_dir/"
+        : # silent
     done
 }
 
@@ -234,16 +234,11 @@ case "$COMMAND" in
         mkdir -p "$ATLAS_DIR" "$RUNS_DIR"
         if [[ ! -f "$BACKLOG_FILE" ]]; then
             sed "s/\[PROJECT_NAME\]/$PROJECT_NAME/" "$ATLAS_HOME/templates/backlog.md" > "$BACKLOG_FILE"
-            echo "  Created: backlog.md"
         fi
-        if [[ ! -f "$PROGRESS_FILE" ]]; then
-            cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE"
-            echo "  Created: progress.txt"
-        fi
-        [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE" && echo "  Created: guardrails.md"
-        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG" && echo "  Created: activity.log"
-        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG" && echo "  Created: errors.log"
-        # Create .gitignore to exclude session logs (they're local debugging, not code)
+        [[ ! -f "$PROGRESS_FILE" ]] && cp "$ATLAS_HOME/templates/progress.txt" "$PROGRESS_FILE"
+        [[ ! -f "$GUARDRAILS_FILE" ]] && cp "$ATLAS_HOME/templates/guardrails.md" "$GUARDRAILS_FILE"
+        [[ ! -f "$ACTIVITY_LOG" ]] && { echo "# Activity Log"; echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"; echo ""; } > "$ACTIVITY_LOG"
+        [[ ! -f "$ERRORS_LOG" ]] && { echo "# Error Log"; echo ""; } > "$ERRORS_LOG"
         if [[ ! -f "$ATLAS_DIR/.gitignore" ]]; then
             cat > "$ATLAS_DIR/.gitignore" << 'GITIGNORE'
 # Atlas session logs (local debugging files)
@@ -254,9 +249,8 @@ runs/
 # Keep integration session tracked (needed for PR workflow)
 !integration-session.json
 GITIGNORE
-            echo "  Created: .gitignore"
         fi
-        [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/" && echo "  Created: references/"
+        [[ -d "$ATLAS_HOME/references" ]] && [[ ! -d "$ATLAS_DIR/references" ]] && cp -r "$ATLAS_HOME/references" "$ATLAS_DIR/"
 
         install_skills
 
