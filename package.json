@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/atlas",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Autonomous Task Loop Agent System - automates task processing using AI coding agents",
   "bin": {
     "atlas": "atlas.sh"
@@ -35,10 +35,6 @@
     "automation",
     "backlog"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/juancruzrossi/atlas"
-  },
   "license": "ISC",
   "engines": {
     "node": ">=18.0.0"
