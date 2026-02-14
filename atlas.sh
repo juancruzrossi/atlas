@@ -14,7 +14,7 @@ PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="3.1.2"
+ATLAS_VERSION="3.1.3"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
