@@ -147,4 +147,4 @@ When modifying provider-related code:
 - **minor** (1.5.0): new features, backwards compatible
 - **major** (2.0.0): breaking changes
 
-**GitHub Action** creates GitHub releases and publishes to NPM automatically when new version detected.
+**GitHub Action** publishes to NPM automatically when a new version in `package.json` is detected on main.
