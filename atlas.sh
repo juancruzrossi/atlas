@@ -1,13 +1,20 @@
 #!/bin/bash
 set -e
 
-ATLAS_HOME="${HOME}/.atlas"
+# Resolve ATLAS_HOME from script location (works with npm symlinks)
+ATLAS_SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$ATLAS_SOURCE" ]]; do
+    ATLAS_LINK_DIR="$(cd "$(dirname "$ATLAS_SOURCE")" && pwd)"
+    ATLAS_SOURCE="$(readlink "$ATLAS_SOURCE")"
+    [[ "$ATLAS_SOURCE" != /* ]] && ATLAS_SOURCE="$ATLAS_LINK_DIR/$ATLAS_SOURCE"
+done
+ATLAS_HOME="$(cd "$(dirname "$ATLAS_SOURCE")" && pwd)"
 PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
 # Atlas version
-ATLAS_VERSION="2.5.0"
+ATLAS_VERSION="3.0.0"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -168,7 +175,7 @@ print_help() {
     echo "  atlas clean [--all]         Clean runtime artifacts from .atlas/"
     echo "  atlas status                Show task counts and session info"
     echo "  atlas doctor                Check Atlas installation and dependencies"
-    echo "  atlas update                Update Atlas from GitHub (preserves your data)"
+    echo "  atlas update                Show how to update via NPM"
     echo "  atlas [iterations]          Run N iterations autonomously (default: 25)"
     echo ""
     echo "Options:"
@@ -258,57 +265,16 @@ GITIGNORE
         exit 0
         ;;
     update)
-        REPO_URL="https://raw.githubusercontent.com/juancruzrossi/atlas/main"
-        OLD_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" 2>/dev/null | sed 's/## \[\(.*\)\].*/\1/' || echo "unknown")
-
-        echo "Updating Atlas..."
-        mkdir -p "$ATLAS_HOME/templates" "$ATLAS_HOME/references" "$ATLAS_HOME/skills"
-
-        TEMP_ATLAS=$(mktemp)
-        curl -fsSL "$REPO_URL/atlas.sh" -o "$TEMP_ATLAS" || true
-        curl -fsSL "$REPO_URL/prompt.md" -o "$ATLAS_HOME/prompt.md" || true
-        curl -fsSL "$REPO_URL/plan_prompt.md" -o "$ATLAS_HOME/plan_prompt.md" || true
-        curl -fsSL "$REPO_URL/review_prompt.md" -o "$ATLAS_HOME/review_prompt.md" || true
-        curl -fsSL "$REPO_URL/CHANGELOG.md" -o "$ATLAS_HOME/CHANGELOG.md" || true
-        curl -fsSL "$REPO_URL/notify-telegram.sh" -o "$ATLAS_HOME/notify-telegram.sh" && chmod +x "$ATLAS_HOME/notify-telegram.sh" || true
-
-        if [[ -s "$TEMP_ATLAS" ]]; then mv "$TEMP_ATLAS" "$ATLAS_HOME/atlas.sh" && chmod +x "$ATLAS_HOME/atlas.sh"; else rm -f "$TEMP_ATLAS"; fi
-
-        for f in backlog.md progress.txt guardrails.md; do curl -fsSL "$REPO_URL/templates/$f" -o "$ATLAS_HOME/templates/$f" 2>/dev/null || true; done
-        for f in GUARDRAILS.md CONTEXT_ENGINEERING.md; do curl -fsSL "$REPO_URL/references/$f" -o "$ATLAS_HOME/references/$f" 2>/dev/null || true; done
-
-        SKILLS="atlas-integration-flow atlas-branching atlas-guardrails atlas-state"
-        for skill in $SKILLS; do
-            mkdir -p "$ATLAS_HOME/skills/$skill"
-            curl -fsSL "$REPO_URL/skills/$skill/SKILL.md" -o "$ATLAS_HOME/skills/$skill/SKILL.md" 2>/dev/null || true
-        done
-        
-        install_skills
-
-        ATLAS_BIN=$(which atlas 2>/dev/null || true)
-        if [[ -n "$ATLAS_BIN" && -f "$ATLAS_BIN" && ! -L "$ATLAS_BIN" ]]; then cp "$ATLAS_HOME/atlas.sh" "$ATLAS_BIN" && chmod +x "$ATLAS_BIN"; fi
-
-        MISSING=()
-        for f in atlas.sh prompt.md plan_prompt.md review_prompt.md CHANGELOG.md; do
-            if [[ ! -f "$ATLAS_HOME/$f" ]]; then MISSING+=("$f"); fi
-        done
-
-        if [[ ${#MISSING[@]} -gt 0 ]]; then
-            echo ""
-            echo "✗ Error: Failed to download critical file(s):"
-            for f in "${MISSING[@]}"; do echo "  - $f"; done
-            echo ""
-            echo "Check your internet connection and try again."
-            exit 1
-        fi
-
-        NEW_VERSION=$(grep -m1 "^## \[[0-9]" "$ATLAS_HOME/CHANGELOG.md" | sed 's/## \[\(.*\)\].*/\1/')
-
-        if [[ "$OLD_VERSION" == "$NEW_VERSION" ]]; then
-            echo "✓ Atlas v$NEW_VERSION (already up to date)"
-        else
-            echo "✓ Atlas updated: v$OLD_VERSION → v$NEW_VERSION"
-        fi
+        echo "Atlas is now distributed via NPM."
+        echo ""
+        echo "To update, run:"
+        echo "  npm update -g @jxtools/atlas"
+        echo ""
+        echo "To check your current version:"
+        echo "  atlas --version"
+        echo ""
+        echo "To check the latest available version:"
+        echo "  npm view @jxtools/atlas version"
         exit 0
         ;;
     plan)
@@ -403,7 +369,7 @@ GITIGNORE
     review)
         [[ ${#COMMAND_ARGS[@]} -gt 0 ]] && { echo "Usage: atlas review [--dry-run]"; exit 1; }
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
-        [[ ! -f "$ATLAS_HOME/review_prompt.md" ]] && { echo "Error: review_prompt.md not found in $ATLAS_HOME. Run 'atlas update' first."; exit 1; }
+        [[ ! -f "$ATLAS_HOME/review_prompt.md" ]] && { echo "Error: review_prompt.md not found in $ATLAS_HOME. Run 'npm update -g @jxtools/atlas' to fix."; exit 1; }
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Review - AI Audit & Repair                    ║"
@@ -650,7 +616,7 @@ TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
 
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 [[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
-[[ ! -f "$ATLAS_HOME/prompt.md" ]] && { echo "Error: prompt.md not found in $ATLAS_HOME. Run 'atlas update' first."; exit 1; }
+[[ ! -f "$ATLAS_HOME/prompt.md" ]] && { echo "Error: prompt.md not found in $ATLAS_HOME. Run 'npm update -g @jxtools/atlas' to fix."; exit 1; }
 mkdir -p "$RUNS_DIR"
 
 log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }

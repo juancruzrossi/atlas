@@ -13,3 +13,7 @@ errors_log.txt
 
 # Debug
 debug/
+
+# Node
+node_modules/
+*.tgz
