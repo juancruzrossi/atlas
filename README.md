@@ -28,6 +28,12 @@ Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes
 npm install -g @jxtools/atlas
 ```
 
+## Update
+
+```bash
+npm update -g @jxtools/atlas
+```
+
 ### Requirements
 
 - **Node.js 18+** (for npm installation)
@@ -264,14 +270,6 @@ Define in your project's `CLAUDE.md`:
 ```
 
 Atlas reads CLAUDE.md before each task.
-
----
-
-## Update
-
-```bash
-npm update -g @jxtools/atlas
-```
 
 ---
 
