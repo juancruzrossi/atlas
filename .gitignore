@@ -14,6 +14,9 @@ errors_log.txt
 # Debug
 debug/
 
+# Docs (local drafts, not published)
+docs/
+
 # Node
 node_modules/
 *.tgz

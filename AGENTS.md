@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Critical Rules
+
+- **ALWAYS bump the version in `package.json`** after every change merged to main. Don't wait for the user to ask. Use semver: patch for fixes/refactors, minor for features, major for breaking changes.
+- **NEVER push directly to `main`** without admin bypass. Use PRs with squash & merge.
+- When merging PRs with `gh pr merge`, use `--admin` flag to bypass the protection ruleset.
+- Delete branches after merging (`--delete-branch`).
+- Responses in Spanish, code comments in English.
+
 ## Project Overview
 
 Atlas (Autonomous Task Loop Agent System) is a bash-based tool distributed via NPM (`@jxtools/atlas`) that automates task processing using AI coding agents. It reads tasks from a markdown backlog, implements code, runs quality gates, and tracks progress—all autonomously in a loop.
@@ -123,27 +131,27 @@ When modifying provider-related code:
 
 ## GitFlow & Releases
 
-### Development Workflow (OBLIGATORIO)
+### Development Workflow (MANDATORY)
 
-**NUNCA hacer commits directos a main.** Siempre seguir este flujo:
+**NEVER commit directly to main.** Always follow this flow:
 
-1. Crear rama desde main: `git checkout -b [type]/[description]`
-2. Hacer cambios y commits en esa rama
-3. Actualizar CHANGELOG.md y package.json con versión sugerida (ver SemVer abajo)
-4. Push de la rama: `git push -u origin [branch]`
-5. Crear PR: `gh pr create --title "..." --body "..."`
-6. Mergear con squash: `gh pr merge --squash --delete-branch`
-7. Volver a main: `git checkout main && git pull`
+1. Create branch from main: `git checkout -b [type]/[description]`
+2. Make changes and commits on that branch
+3. Update CHANGELOG.md and package.json with suggested version (see SemVer below)
+4. Push branch: `git push -u origin [branch]`
+5. Create PR: `gh pr create --title "..." --body "..."`
+6. Merge with squash: `gh pr merge --squash --delete-branch --admin`
+7. Return to main: `git checkout main && git pull`
 
-### Versionado
+### Versioning
 
-**Antes de crear el PR, SIEMPRE:**
-1. Sugerir version segun SemVer
-2. Preguntar al usuario: "Nueva version (ej: 1.5.0) o va a Unreleased?"
-3. Actualizar CHANGELOG.md y package.json segun respuesta
+**Before creating the PR, ALWAYS:**
+1. Suggest version according to SemVer
+2. Ask the user: "New version (e.g., 1.5.0) or goes to Unreleased?"
+3. Update CHANGELOG.md and package.json accordingly
 
 **SemVer rules:**
-- **patch** (1.4.1): bug fixes
+- **patch** (1.4.1): bug fixes, refactors
 - **minor** (1.5.0): new features, backwards compatible
 - **major** (2.0.0): breaking changes
 
