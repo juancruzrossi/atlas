@@ -1,0 +1,47 @@
+{
+  "name": "@jxtools/atlas",
+  "version": "3.0.0",
+  "description": "Autonomous Task Loop Agent System - automates task processing using AI coding agents",
+  "bin": {
+    "atlas": "atlas.sh"
+  },
+  "files": [
+    "atlas.sh",
+    "prompt.md",
+    "plan_prompt.md",
+    "review_prompt.md",
+    "notify-telegram.sh",
+    "templates/",
+    "references/",
+    "skills/",
+    "scripts/",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "atlas",
+    "autonomous",
+    "agent",
+    "task-loop",
+    "claude-code",
+    "opencode",
+    "codex",
+    "ai",
+    "automation",
+    "backlog"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juancruzrossi/atlas.git"
+  },
+  "homepage": "https://github.com/juancruzrossi/atlas#readme",
+  "bugs": {
+    "url": "https://github.com/juancruzrossi/atlas/issues"
+  },
+  "license": "ISC"
+}

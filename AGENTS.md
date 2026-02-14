@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Atlas (Autonomous Task Loop Agent System) is a bash-based tool that automates task processing using Claude Code. It reads tasks from a markdown backlog, implements code, runs quality gates, and tracks progress—all autonomously in a loop.
+Atlas (Autonomous Task Loop Agent System) is a bash-based tool distributed via NPM (`@jxtools/atlas`) that automates task processing using AI coding agents. It reads tasks from a markdown backlog, implements code, runs quality gates, and tracks progress—all autonomously in a loop.
 
 **Modes:**
 - **Git mode** (auto-detected): Creates branches, PRs, commits, and merges
@@ -18,9 +18,11 @@ prompt.md           System prompt for autonomous iterations
 plan_prompt.md      System prompt for interactive planning mode
 review_prompt.md    System prompt for AI review mode
 notify-telegram.sh  Telegram notifications for iteration progress
-install.sh          Installer script for global installation
+package.json        NPM package configuration (@jxtools/atlas)
+scripts/postinstall.js  Installs skills to AI providers on npm install
 templates/          Initial templates copied on `atlas init`
 references/         Documentation about context engineering and guardrails
+skills/             Skills installed to AI provider directories
 ```
 
 **Core loop** (`atlas.sh`):
@@ -42,12 +44,12 @@ references/         Documentation about context engineering and guardrails
 
 ```bash
 atlas init          # Initialize .atlas/ in current project
-atlas plan "..."    # Interactive planning: interview → spec → tasks
+atlas plan "..."    # Interactive planning: interview -> spec -> tasks
 atlas [N]           # Run N iterations autonomously (default: 25)
 atlas review        # AI audit and repair for .atlas state
 atlas resume [N]    # Resume interrupted integration session
 atlas clean [--all] # Clean runtime files in .atlas/
-atlas update        # Update Atlas from GitHub (preserves project data)
+atlas update        # Show how to update via NPM
 atlas help          # Show help
 ```
 
@@ -59,14 +61,17 @@ atlas help          # Show help
 
 ## Development
 
-This is a pure bash project. No build step required.
+This is a pure bash project distributed as an NPM package. No build step required.
 
 **Testing changes locally:**
 ```bash
-# Run atlas from source (symlink already exists)
+# Run atlas from source
 ./atlas.sh help
 ./atlas.sh init
 ./atlas.sh 1  # Run single iteration
+
+# Test NPM packaging
+npm pack --dry-run  # Verify included files
 ```
 
 **Key environment variables:**
@@ -79,7 +84,7 @@ This is a pure bash project. No build step required.
 
 ## AI Provider Support
 
-Atlas now supports multiple AI providers:
+Atlas supports multiple AI providers:
 
 - **Claude Code** (claudecode) - Default, best for interactive `atlas plan`
 - **OpenCode** (opencode) - Alternative for autonomous execution
@@ -96,9 +101,18 @@ The provider is selected via (in order of priority):
 
 When modifying provider-related code:
 - Maintain backward compatibility (default remains claudecode)
-- Skills are installed to `~/.claude/skills/`, `~/.config/opencode/skills/`, and `~/.codex/skills/`
+- Skills are installed via `scripts/postinstall.js` to `~/.claude/skills/`, `~/.config/opencode/skills/`, and `~/.codex/skills/`
 - Validation happens early (fails fast if selected CLI not installed)
 - Use conditional invocation based on `ATLAS_CLI` variable
+
+## NPM Package
+
+- **Scope:** `@jxtools/atlas`
+- **Install:** `npm install -g @jxtools/atlas`
+- **Update:** `npm update -g @jxtools/atlas`
+- **Entry point:** `atlas.sh` (via `bin` field in package.json)
+- **ATLAS_HOME:** Resolves dynamically from script location (supports npm symlinks)
+- **Versioning:** `package.json` version is the source of truth, keep in sync with CHANGELOG.md
 
 ## Conventions
 
@@ -115,7 +129,7 @@ When modifying provider-related code:
 
 1. Crear rama desde main: `git checkout -b [type]/[description]`
 2. Hacer cambios y commits en esa rama
-3. Actualizar CHANGELOG.md con versión sugerida (ver SemVer abajo)
+3. Actualizar CHANGELOG.md y package.json con versión sugerida (ver SemVer abajo)
 4. Push de la rama: `git push -u origin [branch]`
 5. Crear PR: `gh pr create --title "..." --body "..."`
 6. Mergear con squash: `gh pr merge --squash --delete-branch`
@@ -124,13 +138,13 @@ When modifying provider-related code:
 ### Versionado
 
 **Antes de crear el PR, SIEMPRE:**
-1. Sugerir versión según SemVer
-2. Preguntar al usuario: "¿Nueva versión (ej: 1.5.0) o va a Unreleased?"
-3. Actualizar CHANGELOG.md según respuesta
+1. Sugerir version segun SemVer
+2. Preguntar al usuario: "Nueva version (ej: 1.5.0) o va a Unreleased?"
+3. Actualizar CHANGELOG.md y package.json segun respuesta
 
 **SemVer rules:**
 - **patch** (1.4.1): bug fixes
 - **minor** (1.5.0): new features, backwards compatible
 - **major** (2.0.0): breaking changes
 
-**GitHub Action** creates releases automatically when new version detected.
+**GitHub Action** creates GitHub releases and publishes to NPM automatically when new version detected.
