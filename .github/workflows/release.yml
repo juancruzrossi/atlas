@@ -39,4 +39,4 @@ jobs:
 
       - name: Publish to NPM
         if: steps.check.outputs.skip == 'false'
-        run: npm publish --provenance --access public
+        run: npm publish --access public
