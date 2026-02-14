@@ -31,7 +31,7 @@ npm install -g @jxtools/atlas
 ## Update
 
 ```bash
-npm update -g @jxtools/atlas
+atlas update
 ```
 
 ### Requirements
