@@ -2,35 +2,40 @@
   <h1 align="center">ATLAS</h1>
   <p align="center"><strong>Autonomous Task Loop Agent System</strong></p>
   <p align="center">
-    <em>Let Claude Code work through your backlog while you focus on what matters</em>
+    <em>Let AI coding agents work through your backlog while you focus on what matters</em>
   </p>
 </p>
 
 <p align="center">
-  <a href="#installation">Installation</a> •
+  <a href="#install">Install</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#commands">Commands</a> •
-  <a href="#how-it-works">How It Works</a>
+  <a href="#how-it-works">How It Works</a> •
+  <a href="#configuration">Configuration</a>
 </p>
 
 ---
 
 ## What is Atlas?
 
-Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You define what needs to be done, Atlas handles everything else: branches, code, quality checks, PRs, and merges.
+Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using AI coding agents. You define what needs to be done, Atlas handles everything else: branches, code, quality checks, PRs, and merges.
 
 ---
 
-## Installation
+## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/juancruzrossi/atlas/main/install.sh | bash
+npm install -g @jxtools/atlas
 ```
 
 ### Requirements
 
-- AI Provider: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default), [OpenCode](https://opencode.ai), or [Codex](https://github.com/openai/codex)
-- Git (optional - enables branches, PRs, and commits)
+- **Node.js 18+** (for npm installation)
+- **AI Provider** (at least one):
+  - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default, recommended)
+  - [OpenCode](https://opencode.ai)
+  - [Codex](https://github.com/openai/codex)
+- **Git** (optional - enables branches, PRs, and commits)
 
 ### AI Provider Configuration
 
@@ -87,15 +92,14 @@ atlas
 | Command | Description |
 |---------|-------------|
 | `atlas init` | Initialize `.atlas/` in current project |
-| `atlas plan "..."` | Interactive feature planning (interview → spec → tasks) |
+| `atlas plan "..."` | Interactive feature planning (interview -> spec -> tasks) |
 | `atlas [N]` | Run N iterations autonomously (default: 25) |
 | `atlas review [--dry-run]` | Audit Atlas state and auto-fix inconsistencies (or report only with dry-run) |
 | `atlas resume [N]` | Resume an interrupted session from its active integration branch/PR |
 | `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
 | `atlas status` | Show task counts and active session info |
 | `atlas doctor` | Check Atlas installation and dependencies |
-| `atlas [--cli <provider>] [command or iterations]` | Run any command (or iteration loop) with a specific AI provider |
-| `atlas update` | Update Atlas from GitHub (preserves your project data) |
+| `atlas update` | Show how to update via NPM |
 | `atlas help` | Show help |
 
 ---
@@ -106,13 +110,13 @@ For complex features, use `atlas plan` to interview and decompose before autonom
 
 ```bash
 atlas plan "add user authentication with JWT"
-# → Interactive interview about requirements
-# → Generates spec in .atlas/specs/
-# → Creates tasks in backlog with **Spec:** field
+# -> Interactive interview about requirements
+# -> Generates spec in .atlas/specs/
+# -> Creates tasks in backlog with **Spec:** field
 
 atlas 5
-# → Executes 5 tasks autonomously (no human intervention)
-# → Each task reads the full spec for context (integral view)
+# -> Executes 5 tasks autonomously (no human intervention)
+# -> Each task reads the full spec for context (integral view)
 ```
 
 ---
@@ -164,7 +168,7 @@ atlas clean --all # Also reset activity/errors logs and stale session metadata
 
 ---
 
-## Configuration (optional)
+## Configuration
 
 Override defaults with `ATLAS_` environment variables:
 
@@ -190,11 +194,11 @@ for each iteration:
     3. Move to IN_PROGRESS [git: + commit]
     4. Implement task
     5. Run quality gates (from CLAUDE.md)
-    6. [git] Create PR → merge (squash) to integration branch
+    6. [git] Create PR -> merge (squash) to integration branch
     7. Move to DONE [git: + commit]
     8. Write to progress.txt and guardrails.md
-    9. If error → log to errors.log, move back to TODO
-   10. If no tasks → exit loop
+    9. If error -> log to errors.log, move back to TODO
+   10. If no tasks -> exit loop
 ```
 
 **Modes:**
@@ -219,7 +223,7 @@ for each iteration:
 ## IN_PROGRESS
 
 ## DONE
-### HIGH-000: Completed task ✓
+### HIGH-000: Completed task
 - **Completed:** 2026-01-15
 - **PR:** #1
 
@@ -260,3 +264,17 @@ Define in your project's `CLAUDE.md`:
 ```
 
 Atlas reads CLAUDE.md before each task.
+
+---
+
+## Update
+
+```bash
+npm update -g @jxtools/atlas
+```
+
+---
+
+## License
+
+ISC

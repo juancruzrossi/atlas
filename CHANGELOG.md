@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-02-13
+
+### Changed
+- **NPM distribution**: Atlas is now published as `@jxtools/atlas` on NPM. Install with `npm install -g @jxtools/atlas`
+- **Dynamic ATLAS_HOME**: Script resolves its own location via symlink traversal instead of hardcoded `~/.atlas`
+- **`atlas update` command**: Now shows NPM update instructions instead of downloading from GitHub
+- **GitHub Action**: Now publishes to NPM registry on new versions (requires `NPM_TOKEN` secret)
+- **Error messages**: Updated references from `atlas update` to `npm update -g @jxtools/atlas`
+
+### Removed
+- **`install.sh`**: Replaced by `npm install -g @jxtools/atlas`
+- **curl-based update**: No longer downloads files from GitHub raw URLs
+- **`~/.atlas` directory**: Package files now live inside npm's global `node_modules`
+
+### Added
+- **`package.json`**: NPM package configuration with `@jxtools/atlas` scope
+- **`scripts/postinstall.js`**: Automatically installs Atlas skills to detected AI providers on `npm install`
+
 ## [2.6.0] - 2026-02-12
 
 ### Changed
