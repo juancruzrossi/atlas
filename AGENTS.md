@@ -56,6 +56,7 @@ atlas plan "..."    # Interactive planning: interview -> spec -> tasks
 atlas [N]           # Run N iterations autonomously (default: 25)
 atlas review        # AI audit and repair for .atlas state
 atlas resume [N]    # Resume interrupted integration session
+atlas logs          # View iteration logs (--tail N, --failed, --search)
 atlas clean [--all] # Clean runtime files in .atlas/
 atlas update        # Show how to update via NPM
 atlas help          # Show help
@@ -71,14 +72,10 @@ atlas help          # Show help
 
 This is a pure bash project distributed as an NPM package. No build step required.
 
-**Testing changes locally:**
+**Testing:**
 ```bash
-# Run atlas from source
-./atlas.sh help
-./atlas.sh init
-./atlas.sh 1  # Run single iteration
-
-# Test NPM packaging
+npm test            # Run bats test suite (51 tests)
+./atlas.sh help     # Smoke test
 npm pack --dry-run  # Verify included files
 ```
 
