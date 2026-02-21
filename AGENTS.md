@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Critical Rules
 
-- **ALWAYS run `npm test`** before creating a PR. All 51+ bats tests must pass.
+- **ALWAYS run `npm test`** before creating a PR. All tests must pass.
 - **ALWAYS bump the version in `package.json`** after every change merged to main. Use semver: patch for fixes, minor for features, major for breaking.
 - **NEVER push directly to `main`** without admin bypass. Use PRs with squash & merge.
 - When merging PRs with `gh pr merge`, use `--admin` flag to bypass the protection ruleset.
