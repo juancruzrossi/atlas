@@ -103,6 +103,9 @@ atlas
 | `atlas review [--dry-run]` | Audit Atlas state and auto-fix inconsistencies (or report only with dry-run) |
 | `atlas resume [N]` | Resume an interrupted session from its active integration branch/PR |
 | `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
+| `atlas logs [--tail N]` | Show iteration logs (default: last 10) |
+| `atlas logs --failed` | Show only failed iterations |
+| `atlas logs --search <pat>` | Search logs for pattern |
 | `atlas status` | Show task counts and active session info |
 | `atlas doctor` | Check Atlas installation and dependencies |
 | `atlas update` | Show how to update via NPM |

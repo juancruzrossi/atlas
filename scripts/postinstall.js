@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
-const { existsSync, mkdirSync, cpSync, readdirSync, chmodSync } = require('fs')
+const { existsSync, mkdirSync, cpSync, readdirSync, chmodSync, readFileSync, writeFileSync } = require('fs')
 const { resolve, join } = require('path')
 const { execSync } = require('child_process')
+const { createHash } = require('crypto')
 
 const atlasHome = resolve(__dirname, '..')
 const skillsDir = join(atlasHome, 'skills')
 const homeDir = process.env.HOME || process.env.USERPROFILE
+const MANIFEST_NAME = '.atlas-skills-manifest.json'
 
 if (!existsSync(skillsDir)) process.exit(0)
 
@@ -30,14 +32,65 @@ if (hasCommand('claude')) providers.push(join(homeDir, '.claude', 'skills'))
 if (hasCommand('opencode')) providers.push(join(homeDir, '.config', 'opencode', 'skills'))
 if (hasCommand('codex')) providers.push(join(homeDir, '.codex', 'skills'))
 
+function sha256(filePath) {
+  try {
+    const content = readFileSync(filePath)
+    return createHash('sha256').update(content).digest('hex')
+  } catch { return null }
+}
+
+function loadManifest(targetDir) {
+  const manifestPath = join(targetDir, MANIFEST_NAME)
+  try {
+    return JSON.parse(readFileSync(manifestPath, 'utf8'))
+  } catch { return {} }
+}
+
+function saveManifest(targetDir, manifest) {
+  writeFileSync(join(targetDir, MANIFEST_NAME), JSON.stringify(manifest, null, 2) + '\n')
+}
+
+function getSkillFiles(dir) {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir).filter(f => !f.startsWith('.'))
+}
+
 for (const targetDir of providers) {
+  const manifest = loadManifest(targetDir)
+  const newManifest = { ...manifest }
+
   for (const skill of skillDirs) {
-    const dest = join(targetDir, skill)
-    mkdirSync(dest, { recursive: true })
-    try {
-      cpSync(join(skillsDir, skill), dest, { recursive: true })
-    } catch { /* ignore copy errors */ }
+    const srcDir = join(skillsDir, skill)
+    const destDir = join(targetDir, skill)
+    mkdirSync(destDir, { recursive: true })
+
+    for (const file of getSkillFiles(srcDir)) {
+      const srcFile = join(srcDir, file)
+      const destFile = join(destDir, file)
+      const srcHash = sha256(srcFile)
+      const manifestKey = `${skill}/${file}`
+      const destExists = existsSync(destFile)
+
+      if (destExists) {
+        const destHash = sha256(destFile)
+        const lastKnownHash = manifest[manifestKey]
+
+        // File was customized by user (hash differs from what we installed)
+        if (lastKnownHash && destHash !== lastKnownHash && destHash !== srcHash) {
+          try { cpSync(srcFile, destFile + '.new') } catch { /* ignore */ }
+          newManifest[manifestKey] = srcHash
+          continue
+        }
+      }
+
+      try {
+        cpSync(srcFile, destFile)
+        newManifest[manifestKey] = srcHash
+      } catch { /* ignore */ }
+    }
   }
+
+  saveManifest(targetDir, newManifest)
 }
 
 // Ensure atlas.sh is executable
