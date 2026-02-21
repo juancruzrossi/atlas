@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Critical Rules
 
-- **ALWAYS bump the version in `package.json`** after every change merged to main. Don't wait for the user to ask. Use semver: patch for fixes/refactors, minor for features, major for breaking changes.
+- **ALWAYS run `npm test`** before creating a PR. All tests must pass.
+- **ALWAYS bump the version in `package.json`** after every change merged to main. Use semver: patch for fixes, minor for features, major for breaking.
 - **NEVER push directly to `main`** without admin bypass. Use PRs with squash & merge.
 - When merging PRs with `gh pr merge`, use `--admin` flag to bypass the protection ruleset.
 - Delete branches after merging (`--delete-branch`).
@@ -56,6 +57,7 @@ atlas plan "..."    # Interactive planning: interview -> spec -> tasks
 atlas [N]           # Run N iterations autonomously (default: 25)
 atlas review        # AI audit and repair for .atlas state
 atlas resume [N]    # Resume interrupted integration session
+atlas logs          # View iteration logs (--tail N, --failed, --search)
 atlas clean [--all] # Clean runtime files in .atlas/
 atlas update        # Show how to update via NPM
 atlas help          # Show help
@@ -71,14 +73,10 @@ atlas help          # Show help
 
 This is a pure bash project distributed as an NPM package. No build step required.
 
-**Testing changes locally:**
+**Testing:**
 ```bash
-# Run atlas from source
-./atlas.sh help
-./atlas.sh init
-./atlas.sh 1  # Run single iteration
-
-# Test NPM packaging
+npm test            # Run bats test suite (51 tests)
+./atlas.sh help     # Smoke test
 npm pack --dry-run  # Verify included files
 ```
 
@@ -128,6 +126,13 @@ When modifying provider-related code:
 - Prompt changes: edit `prompt.md`, keep algorithm section in sync with `atlas.sh`
 - Template changes: edit files in `templates/`, they're copied on `atlas init`
 - **CLAUDE.md and AGENTS.md must stay in sync** (identical content, different filenames for different providers)
+
+## Bash Gotchas (set -e)
+
+- **`((var++))` crashes when var=0**: Post-increment returns 0 → bash treats as failure. Use `var=$((var + 1))` instead.
+- **`local` only inside functions**: Not valid in top-level for-loops or case blocks.
+- **Function order matters**: Define functions before first call (no hoisting like JS).
+- **Version lives in `package.json`**: `atlas.sh` reads it via `json_get`. Hardcoded value is fallback only.
 
 ## GitFlow & Releases
 

@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/atlas",
-  "version": "3.1.4",
+  "version": "3.2.0",
   "description": "Autonomous Task Loop Agent System - automates task processing using AI coding agents",
   "bin": {
     "atlas": "atlas.sh"
@@ -18,7 +18,8 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "test": "npx bats tests/"
   },
   "publishConfig": {
     "access": "public"
@@ -42,5 +43,8 @@
   "license": "ISC",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "bats": "^1.13.0"
   }
 }

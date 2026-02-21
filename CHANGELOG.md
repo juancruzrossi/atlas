@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-02-21
+
+### Added
+- **`atlas logs` command**: View iteration logs with filters (`--tail N`, `--failed`, `--search <pattern>`)
+- **Test suite with bats-core**: 51 tests covering CLI parsing, init, clean, logs, json_get, count_tasks, stale reset
+- **CI workflow** (`.github/workflows/ci.yml`): Runs tests on push/PR to main
+- **`npm test` script**: Runs full bats test suite
+
+### Fixed
+- **Temp file cleanup on SIGINT/SIGTERM**: `PROMPT_FILE_TMP` is now cleaned up in `cleanup()` (TD-01)
+- **Version duplication**: `ATLAS_VERSION` now reads from `package.json` with hardcoded fallback (TD-02)
+- **`json_get()` robustness**: Uses `jq` when available, falls back to awk (TD-03)
+- **Stale task detection**: Uses `STARTED:` timestamp metadata in backlog when available, falls back to log file timestamp (TD-04)
+- **Duplicate `count_tasks`/`local_count`**: Eliminated duplicate; single `count_tasks()` defined before case dispatcher (TD-05)
+- **`cleanup()` using undefined `DEFAULT_BRANCH`**: Guards against undefined variable (TD-07)
+
+### Changed
+- **Skills installation preserves customizations**: `postinstall.js` now uses SHA256 manifest to detect user-modified skill files and preserves them on update (TD-06)
+
 ## [3.1.4] - 2026-02-14
 
 ### Changed

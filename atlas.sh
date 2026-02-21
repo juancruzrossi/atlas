@@ -13,8 +13,30 @@ PROJECT_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 NOTIFY_TELEGRAM="${ATLAS_NOTIFY_TELEGRAM:-true}"
 
-# Atlas version
-ATLAS_VERSION="3.1.4"
+# Portable JSON value extractor (handles both string and integer values)
+# Uses jq when available for robustness, falls back to awk
+json_get() {
+    local key="$1" file="$2"
+    [[ ! -f "$file" ]] && return
+    if command -v jq >/dev/null 2>&1; then
+        jq -r --arg k "$key" '.[$k] // empty' "$file" 2>/dev/null
+        return
+    fi
+    awk -v k="$key" '
+        $0 ~ ("\"" k "\"") {
+            sub(".*\"" k "\"[[:space:]]*:[[:space:]]*", "")
+            sub(/^"/, "")
+            sub(/".*/, "")
+            sub(/,.*/, "")
+            sub(/[[:space:]]*$/, "")
+            print; exit
+        }
+    ' "$file"
+}
+
+# Atlas version (read from package.json, fallback to hardcoded)
+ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.0"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -24,6 +46,9 @@ SHOW_HELP=false
 SHOW_VERSION=false
 REVIEW_DRY_RUN=false
 CLEAN_ALL=false
+LOGS_TAIL=""
+LOGS_FAILED=false
+LOGS_SEARCH=""
 POSITIONAL_ARGS=()
 
 # Parse global flags from any position
@@ -52,6 +77,27 @@ while [[ $# -gt 0 ]]; do
         --all)
             CLEAN_ALL=true
             ;;
+        --tail)
+            if [[ $# -lt 2 || ! "$2" =~ ^[0-9]+$ ]]; then
+                echo "Error: --tail requires a number"
+                exit 1
+            fi
+            LOGS_TAIL="$2"
+            shift 2
+            continue
+            ;;
+        --failed)
+            LOGS_FAILED=true
+            ;;
+        --search)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --search requires a pattern"
+                exit 1
+            fi
+            LOGS_SEARCH="$2"
+            shift 2
+            continue
+            ;;
         --version|-v)
             SHOW_VERSION=true
             ;;
@@ -77,6 +123,7 @@ DEFAULT_MAX_ITERATIONS=25
 DEFAULT_STALE_SECONDS=7200
 DEFAULT_TIMEOUT=1200
 
+PROMPT_FILE_TMP=""
 ATLAS_DIR=".atlas"
 RUNS_DIR="$ATLAS_DIR/runs"
 ACTIVITY_LOG="$ATLAS_DIR/activity.log"
@@ -84,22 +131,6 @@ ERRORS_LOG="$ATLAS_DIR/errors.log"
 PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
-
-# Portable JSON value extractor (handles both string and integer values)
-json_get() {
-    local key="$1" file="$2"
-    [[ ! -f "$file" ]] && return
-    awk -v k="$key" '
-        $0 ~ ("\"" k "\"") {
-            sub(".*\"" k "\"[[:space:]]*:[[:space:]]*", "")
-            sub(/^"/, "")
-            sub(/".*/, "")
-            sub(/,.*/, "")
-            sub(/[[:space:]]*$/, "")
-            print; exit
-        }
-    ' "$file"
-}
 
 # Install Atlas skills to all available AI providers
 install_skills() {
@@ -173,6 +204,9 @@ print_help() {
     echo "  atlas review [--dry-run]    Audit issues (and optionally auto-fix)"
     echo "  atlas resume [iterations]   Resume interrupted integration session"
     echo "  atlas clean [--all]         Clean runtime artifacts from .atlas/"
+    echo "  atlas logs [--tail N]       Show iteration logs (default: last 10)"
+    echo "  atlas logs --failed         Show only failed iterations"
+    echo "  atlas logs --search <pat>   Search logs for pattern"
     echo "  atlas status                Show task counts and session info"
     echo "  atlas doctor                Check Atlas installation and dependencies"
     echo "  atlas update                Show how to update via NPM"
@@ -214,7 +248,7 @@ if [[ "$SHOW_HELP" == "true" ]]; then
     COMMAND="help"
 elif [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]]; then
     COMMAND="run"
-elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "status" || "${POSITIONAL_ARGS[0]}" == "doctor" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
+elif [[ "${POSITIONAL_ARGS[0]}" == "init" || "${POSITIONAL_ARGS[0]}" == "update" || "${POSITIONAL_ARGS[0]}" == "plan" || "${POSITIONAL_ARGS[0]}" == "resume" || "${POSITIONAL_ARGS[0]}" == "review" || "${POSITIONAL_ARGS[0]}" == "clean" || "${POSITIONAL_ARGS[0]}" == "status" || "${POSITIONAL_ARGS[0]}" == "doctor" || "${POSITIONAL_ARGS[0]}" == "logs" || "${POSITIONAL_ARGS[0]}" == "help" ]]; then
     COMMAND="${POSITIONAL_ARGS[0]}"
     COMMAND_ARGS=("${POSITIONAL_ARGS[@]:1}")
 elif [[ "${POSITIONAL_ARGS[0]}" =~ ^[0-9]+$ ]]; then
@@ -235,6 +269,30 @@ if [[ "$CLEAN_ALL" == "true" && "$COMMAND" != "clean" && "$COMMAND" != "help" ]]
     echo "Error: --all is only valid with 'atlas clean'"
     exit 1
 fi
+
+# Count tasks in backlog (bash-verified, not model-dependent)
+count_tasks() {
+    local file="$1"
+    [[ ! -f "$file" ]] && echo "0 0 0" && return
+
+    local in_section=""
+    local todo=0 in_progress=0 done=0
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
+            in_section="${BASH_REMATCH[1]}"
+            [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
+        elif [[ "$line" =~ ^###[[:space:]] ]]; then
+            case "$in_section" in
+                TODO) ((todo++)) ;;
+                IN_PROGRESS) ((in_progress++)) ;;
+                DONE) ((done++)) ;;
+            esac
+        fi
+    done < "$file"
+
+    echo "$todo $in_progress $done"
+}
 
 case "$COMMAND" in
     init)
@@ -478,24 +536,90 @@ GITIGNORE
         [[ "$CLEAN_ALL" == "true" ]] && echo "   Reset activity/errors logs: yes"
         exit 0
         ;;
+    logs)
+        [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
+        [[ ${#COMMAND_ARGS[@]} -gt 0 ]] && { echo "Usage: atlas logs [--tail N] [--failed] [--search <pattern>]"; exit 1; }
+
+        LOGS_LIMIT="${LOGS_TAIL:-10}"
+
+        # Collect log files sorted by modification time (newest first)
+        LOG_FILES=()
+        while IFS= read -r -d '' f; do
+            LOG_FILES+=("$f")
+        done < <(find "$RUNS_DIR" -maxdepth 1 -name '*.log' -printf '%T@\t%p\0' 2>/dev/null | sort -z -t$'\t' -k1,1rn | cut -z -f2-)
+
+        if [[ ${#LOG_FILES[@]} -eq 0 ]]; then
+            echo "No iteration logs found in $RUNS_DIR/"
+            exit 0
+        fi
+
+        # Parse a log file and print a summary line
+        show_log_entry() {
+            local logfile="$1"
+
+            local summary
+            summary=$(sed -n '/=== SUMMARY ===/,/^$/p' "$logfile" 2>/dev/null | head -10)
+
+            local task_line status_line
+            task_line=$(echo "$summary" | grep "^Task:" | head -1)
+            status_line=$(echo "$summary" | grep "^Status:" | head -1)
+
+            [[ -z "$task_line" ]] && task_line="(no summary)"
+            [[ -z "$status_line" ]] && status_line="Status: UNKNOWN"
+
+            local status_val
+            status_val=$(echo "$status_line" | sed 's/Status: //')
+
+            local emoji="  "
+            case "$status_val" in
+                DONE*|COMPLETE*|MERGED*) emoji="OK" ;;
+                SKIP*) emoji="--" ;;
+                FAIL*|ERROR*) emoji="!!" ;;
+            esac
+
+            local mod_epoch mod_date
+            mod_epoch=$(stat -c '%Y' "$logfile" 2>/dev/null || stat -f '%m' "$logfile" 2>/dev/null)
+            mod_date=$(date -d "@$mod_epoch" '+%Y-%m-%d %H:%M' 2>/dev/null || date -r "$mod_epoch" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "unknown")
+
+            printf "[%s] %s  %-40s  %s\n" "$emoji" "$mod_date" "$task_line" "$status_line"
+        }
+
+        # Apply filters and display
+        displayed=0
+        for logfile in "${LOG_FILES[@]}"; do
+            [[ $displayed -ge $LOGS_LIMIT ]] && break
+
+            # --failed filter
+            if [[ "$LOGS_FAILED" == "true" ]]; then
+                local_summary_status=$(sed -n '/=== SUMMARY ===/,/^$/p' "$logfile" 2>/dev/null | grep "^Status:" | head -1)
+                if ! echo "$local_summary_status" | grep -qiE "FAIL|ERROR|SKIP"; then
+                    continue
+                fi
+            fi
+
+            # --search filter
+            if [[ -n "$LOGS_SEARCH" ]]; then
+                if ! grep -qi "$LOGS_SEARCH" "$logfile" 2>/dev/null; then
+                    continue
+                fi
+            fi
+
+            show_log_entry "$logfile"
+            displayed=$((displayed + 1))
+        done
+
+        if [[ $displayed -eq 0 ]]; then
+            echo "No matching logs found."
+        else
+            echo ""
+            echo "$displayed of ${#LOG_FILES[@]} logs shown"
+        fi
+        exit 0
+        ;;
     status)
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
-        # Reuse count_tasks (defined later, but we need it here)
-        local_count() {
-            local file="$1" in_section="" todo=0 ip=0 done=0
-            while IFS= read -r line; do
-                if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
-                    in_section="${BASH_REMATCH[1]}"
-                    [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
-                elif [[ "$line" =~ ^###[[:space:]] ]]; then
-                    case "$in_section" in TODO) ((todo++)) ;; IN_PROGRESS) ((ip++)) ;; DONE) ((done++)) ;; esac
-                fi
-            done < "$file"
-            echo "$todo $ip $done"
-        }
-
-        read TODO_N IP_N DONE_N <<< $(local_count "$BACKLOG_FILE")
+        read TODO_N IP_N DONE_N <<< $(count_tasks "$BACKLOG_FILE")
 
         echo "Atlas Status - $PROJECT_NAME"
         echo ""
@@ -630,22 +754,34 @@ reset_stale_tasks() {
     in_progress_task=$(awk '/^## IN.PROGRESS/{f=1;next} /^## /{f=0} f && /^### /{print;exit}' "$BACKLOG_FILE")
     [[ -z "$in_progress_task" ]] && return
 
-    # Check staleness via most recent run log
-    local latest_run
-    latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
-    [[ -z "$latest_run" ]] && return
-
-    local last_mod now age
-    last_mod=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+    # Check staleness: prefer STARTED metadata, fallback to log timestamp
+    local now started_ts age
     now=$(date +%s)
-    age=$((now - last_mod))
 
+    # Try to extract STARTED timestamp from IN_PROGRESS task
+    local started_str
+    started_str=$(awk '/^## IN.PROGRESS/{f=1;next} /^## /{f=0} f && /- \*\*Started:\*\*/{gsub(/.*Started:\*\* */,""); print; exit}' "$BACKLOG_FILE")
+
+    if [[ -n "$started_str" ]]; then
+        # Parse ISO timestamp to epoch
+        started_ts=$(date -d "$started_str" +%s 2>/dev/null || date -jf "%Y-%m-%dT%H:%M:%S" "$started_str" +%s 2>/dev/null || echo "")
+    fi
+
+    if [[ -z "$started_ts" ]]; then
+        # Fallback: use most recent run log modification time
+        local latest_run
+        latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
+        [[ -z "$latest_run" ]] && return
+        started_ts=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+    fi
+
+    age=$((now - started_ts))
     [[ "$age" -le "$STALE_SECONDS" ]] && return
 
     echo "⚠️  Stale task in IN_PROGRESS (${age}s old, threshold: ${STALE_SECONDS}s)"
     echo "   Resetting to TODO..."
 
-    # Block-based rewrite: collect IN_PROGRESS content and insert before its header
+    # Block-based rewrite: move IN_PROGRESS tasks to TODO, strip Started field
     awk '
         /^## IN.PROGRESS/ { ip_header = $0; in_ip = 1; next }
         in_ip && /^## / {
@@ -655,6 +791,7 @@ reset_stale_tasks() {
             in_ip = 0
             print; next
         }
+        in_ip && /^- \*\*Started:\*\*/ { next }
         in_ip { ip_content = ip_content $0 "\n"; next }
         { print }
         END { if (in_ip) { printf "%s", ip_content; print ip_header } }
@@ -665,32 +802,6 @@ reset_stale_tasks() {
 }
 
 git_head() { git rev-parse --short HEAD 2>/dev/null || echo ""; }
-
-# Count tasks in backlog (bash-verified, not model-dependent)
-count_tasks() {
-    local file="$1"
-    [[ ! -f "$file" ]] && echo "0 0 0" && return
-
-    local in_section=""
-    local todo=0 in_progress=0 done=0
-
-    while IFS= read -r line; do
-        # Detect section headers
-        if [[ "$line" =~ ^##[[:space:]]+(TODO|IN_PROGRESS|IN\ PROGRESS|DONE|DELAYED) ]]; then
-            in_section="${BASH_REMATCH[1]}"
-            [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
-        # Count tasks (lines starting with ### )
-        elif [[ "$line" =~ ^###[[:space:]] ]]; then
-            case "$in_section" in
-                TODO) ((todo++)) ;;
-                IN_PROGRESS) ((in_progress++)) ;;
-                DONE) ((done++)) ;;
-            esac
-        fi
-    done < "$file"
-
-    echo "$todo $in_progress $done"
-}
 
 send_notification() {
     [[ "$NOTIFY_TELEGRAM" == "true" ]] && [[ -x "$ATLAS_HOME/notify-telegram.sh" ]] && "$ATLAS_HOME/notify-telegram.sh" "$1" "$MAX_ITERATIONS" "$PROJECT_NAME" "$2" &
@@ -704,8 +815,9 @@ MAX_CONSECUTIVE_ERRORS=3
 cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
+    [[ -n "$PROMPT_FILE_TMP" ]] && rm -f "$PROMPT_FILE_TMP"
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
-    [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
+    [[ "$GIT_MODE" == "true" && -n "${DEFAULT_BRANCH:-}" ]] && git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
     exit 130
 }
 trap cleanup SIGINT SIGTERM
