@@ -10,6 +10,10 @@ const skillsDir = join(atlasHome, 'skills')
 const homeDir = process.env.HOME || process.env.USERPROFILE
 const MANIFEST_NAME = '.atlas-skills-manifest.json'
 
+function warn(message) {
+  process.stderr.write(`Warning: ${message}\n`)
+}
+
 if (!existsSync(skillsDir)) process.exit(0)
 
 const skillDirs = readdirSync(skillsDir).filter(d =>
@@ -77,7 +81,11 @@ for (const targetDir of providers) {
 
         // File was customized by user (hash differs from what we installed)
         if (lastKnownHash && destHash !== lastKnownHash && destHash !== srcHash) {
-          try { cpSync(srcFile, destFile + '.new') } catch { /* ignore */ }
+          try {
+            cpSync(srcFile, destFile + '.new')
+          } catch (error) {
+            warn(`could not preserve updated skill '${manifestKey}' as '.new': ${error.message}`)
+          }
           newManifest[manifestKey] = srcHash
           continue
         }
@@ -86,7 +94,9 @@ for (const targetDir of providers) {
       try {
         cpSync(srcFile, destFile)
         newManifest[manifestKey] = srcHash
-      } catch { /* ignore */ }
+      } catch (error) {
+        warn(`could not install skill '${manifestKey}': ${error.message}`)
+      }
     }
   }
 
@@ -96,9 +106,13 @@ for (const targetDir of providers) {
 // Ensure atlas.sh is executable
 try {
   chmodSync(join(atlasHome, 'atlas.sh'), 0o755)
-} catch { /* ignore */ }
+} catch (error) {
+  warn(`could not mark atlas.sh as executable: ${error.message}`)
+}
 
 // Ensure notify-telegram.sh is executable
 try {
   chmodSync(join(atlasHome, 'notify-telegram.sh'), 0o755)
-} catch { /* ignore */ }
+} catch (error) {
+  warn(`could not mark notify-telegram.sh as executable: ${error.message}`)
+}
