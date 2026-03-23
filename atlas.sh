@@ -36,7 +36,7 @@ json_get() {
 
 # Atlas version (read from package.json, fallback to hardcoded)
 ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
-[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.0"
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.1"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -131,6 +131,10 @@ ERRORS_LOG="$ATLAS_DIR/errors.log"
 PROGRESS_FILE="$ATLAS_DIR/progress.txt"
 GUARDRAILS_FILE="$ATLAS_DIR/guardrails.md"
 BACKLOG_FILE="$ATLAS_DIR/backlog.md"
+SESSION_FILE="$ATLAS_DIR/integration-session.json"
+DEFAULT_OPENCODE_PERMISSION='{"*":"allow"}'
+GIT_MODE="false"
+DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
 
 # Install Atlas skills to all available AI providers
 install_skills() {
@@ -150,25 +154,6 @@ install_skills() {
         done
         : # silent
     done
-}
-
-# Invoke the selected AI provider with a prompt
-# Usage: run_provider <mode> <prompt>
-# Modes: plan, review, build (opencode agent names; ignored by codex/claude)
-run_provider() {
-    local mode="$1" prompt="$2"
-    case "$ATLAS_CLI" in
-        opencode)
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            opencode run --agent "$mode" "$prompt"
-            ;;
-        codex)
-            codex exec --yolo "$prompt"
-            ;;
-        *)
-            claude --dangerously-skip-permissions "$prompt"
-            ;;
-    esac
 }
 
 # Cross-platform timeout function
@@ -191,6 +176,123 @@ run_with_timeout() {
     # Fallback: run without timeout (macOS without coreutils)
     "$@"
     return $?
+}
+
+require_command() {
+    local command_name="$1" install_hint="$2"
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        echo "Error: $command_name not found. $install_hint"
+        exit 1
+    fi
+}
+
+validate_cli_installed() {
+    case "$ATLAS_CLI" in
+        claudecode)
+            if ! command -v claude >/dev/null 2>&1; then
+                echo "❌ Error: Claude Code not found"
+                echo "   Install it: https://docs.anthropic.com/en/docs/claude-code"
+                echo "   Or use OpenCode: curl -fsSL https://opencode.ai/install | bash"
+                exit 1
+            fi
+            ;;
+        opencode)
+            if ! command -v opencode >/dev/null 2>&1; then
+                echo "❌ Error: OpenCode not found"
+                echo "   Install it: curl -fsSL https://opencode.ai/install | bash"
+                echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
+                exit 1
+            fi
+            ;;
+        codex)
+            if ! command -v codex >/dev/null 2>&1; then
+                echo "❌ Error: Codex CLI not found"
+                echo "   Install it: npm install -g @openai/codex"
+                echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+detect_default_branch() {
+    local detected_branch="${ATLAS_DEFAULT_BRANCH:-}"
+
+    if [[ -z "$detected_branch" ]]; then
+        detected_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || detected_branch="main"
+        [[ -z "$detected_branch" ]] && detected_branch="main"
+    fi
+
+    echo "$detected_branch"
+}
+
+get_pr_state() {
+    local pr_number="$1"
+
+    if [[ -z "$pr_number" || "$pr_number" == "null" ]] || ! command -v gh >/dev/null 2>&1; then
+        echo "UNKNOWN"
+        return
+    fi
+
+    gh pr view "$pr_number" --json state -q '.state' 2>/dev/null || echo "UNKNOWN"
+}
+
+file_mtime() {
+    local file="$1"
+    stat -c '%Y' "$file" 2>/dev/null || stat -f '%m' "$file" 2>/dev/null || echo 0
+}
+
+cleanup_prompt_file() {
+    [[ -n "$PROMPT_FILE_TMP" ]] && rm -f "$PROMPT_FILE_TMP"
+    PROMPT_FILE_TMP=""
+}
+
+log_activity() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"
+}
+
+# Invoke the selected AI provider with a prompt file
+# Usage: run_provider <mode> <prompt_file> [timeout_seconds] [output_last_message_file]
+# Modes: plan, review, build (opencode agent names; ignored by codex/claude)
+run_provider() {
+    local mode="$1" prompt_file="$2" timeout_seconds="${3:-}" output_last_message_file="${4:-}"
+
+    case "$ATLAS_CLI" in
+        opencode)
+            export OPENCODE_PERMISSION="${OPENCODE_PERMISSION:-$DEFAULT_OPENCODE_PERMISSION}"
+            if [[ -n "$timeout_seconds" ]]; then
+                run_with_timeout "$timeout_seconds" opencode run --agent "$mode" "Follow the attached instructions file exactly." --file "$prompt_file"
+            else
+                opencode run --agent "$mode" "Follow the attached instructions file exactly." --file "$prompt_file"
+            fi
+            ;;
+        codex)
+            if [[ -n "$timeout_seconds" ]]; then
+                if [[ -n "$output_last_message_file" ]]; then
+                    run_with_timeout "$timeout_seconds" codex exec --yolo -o "$output_last_message_file" - < "$prompt_file"
+                else
+                    run_with_timeout "$timeout_seconds" codex exec --yolo - < "$prompt_file"
+                fi
+            else
+                if [[ -n "$output_last_message_file" ]]; then
+                    codex exec --yolo -o "$output_last_message_file" - < "$prompt_file"
+                else
+                    codex exec --yolo - < "$prompt_file"
+                fi
+            fi
+            ;;
+        *)
+            if [[ "$mode" == "build" ]]; then
+                if [[ -n "$timeout_seconds" ]]; then
+                    run_with_timeout "$timeout_seconds" claude --dangerously-skip-permissions -p < "$prompt_file"
+                else
+                    claude --dangerously-skip-permissions -p < "$prompt_file"
+                fi
+            else
+                claude --dangerously-skip-permissions "$(cat "$prompt_file")"
+            fi
+            ;;
+    esac
 }
 
 print_help() {
@@ -284,9 +386,9 @@ count_tasks() {
             [[ "$in_section" == "IN PROGRESS" ]] && in_section="IN_PROGRESS"
         elif [[ "$line" =~ ^###[[:space:]] ]]; then
             case "$in_section" in
-                TODO) ((todo++)) ;;
-                IN_PROGRESS) ((in_progress++)) ;;
-                DONE) ((done++)) ;;
+                TODO) todo=$((todo + 1)) ;;
+                IN_PROGRESS) in_progress=$((in_progress + 1)) ;;
+                DONE) done=$((done + 1)) ;;
             esac
         fi
     done < "$file"
@@ -352,6 +454,7 @@ GITIGNORE
 
         export FEATURE_REQUEST="$FEATURE_PROMPT"
         export PROJECT_DIR PROJECT_NAME SPEC_FILE BACKLOG_FILE
+        require_command envsubst "Install gettext to use 'atlas plan'."
         PLAN_PROMPT=$(envsubst '$FEATURE_REQUEST $PROJECT_DIR $PROJECT_NAME $SPEC_FILE $BACKLOG_FILE' < "$ATLAS_HOME/plan_prompt.md")
 
         echo "╔═══════════════════════════════════════════════════════╗"
@@ -361,10 +464,12 @@ GITIGNORE
         echo "║  Output:  $SPEC_FILE"
         echo "╚═══════════════════════════════════════════════════════╝"
 
-        log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
         log_activity "PLAN: $FEATURE_PROMPT -> $SPEC_FILE"
 
-        run_provider plan "$PLAN_PROMPT"
+        PROMPT_FILE_TMP=$(mktemp)
+        printf '%s\n' "$PLAN_PROMPT" > "$PROMPT_FILE_TMP"
+        run_provider plan "$PROMPT_FILE_TMP"
+        cleanup_prompt_file
 
         exit 0
         ;;
@@ -375,7 +480,6 @@ GITIGNORE
 
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
-        SESSION_FILE=".atlas/integration-session.json"
         if [[ ! -f "$SESSION_FILE" ]]; then
             echo "❌ No active integration session found."
             echo ""
@@ -392,7 +496,12 @@ GITIGNORE
         [[ -z "$SESSION_BRANCH" || "$SESSION_BRANCH" == "null" ]] && { echo "❌ Invalid session file: missing branch"; exit 1; }
 
         echo "🔍 Checking session status..."
-        PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
+        if ! command -v gh >/dev/null 2>&1; then
+            echo "⚠️  gh CLI not found; cannot verify PR status. Continuing..."
+            PR_STATE="UNKNOWN"
+        else
+            PR_STATE=$(get_pr_state "$SESSION_PR")
+        fi
 
         case "$PR_STATE" in
             MERGED)
@@ -401,7 +510,7 @@ GITIGNORE
                 exit 1 ;;
             CLOSED)
                 echo "❌ Session PR was closed (PR #$SESSION_PR)."
-                echo "   Reopen on GitHub or delete .atlas/integration-session.json"
+                echo "   Reopen on GitHub or delete $SESSION_FILE"
                 exit 1 ;;
             UNKNOWN)
                 echo "⚠️  Could not verify PR status (offline?). Continuing..." ;;
@@ -440,14 +549,15 @@ GITIGNORE
         CLAUDE_MD="CLAUDE.md"
         [[ ! -f "$CLAUDE_MD" ]] && CLAUDE_MD=""
 
-        SESSION_FILE="$ATLAS_DIR/integration-session.json"
-        [[ ! -f "$SESSION_FILE" ]] && SESSION_FILE=""
-
         export PROJECT_DIR PROJECT_NAME GIT_MODE
         export BACKLOG_FILE GUARDRAILS_FILE PROGRESS_FILE ERRORS_LOG ACTIVITY_LOG
-        export CLAUDE_MD SESSION_FILE
+        export CLAUDE_MD
+        require_command envsubst "Install gettext to use 'atlas review'."
 
-        REVIEW_PROMPT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $GIT_MODE $BACKLOG_FILE $GUARDRAILS_FILE $PROGRESS_FILE $ERRORS_LOG $CLAUDE_MD $ACTIVITY_LOG $SESSION_FILE' < "$ATLAS_HOME/review_prompt.md")
+        REVIEW_SESSION_FILE="$SESSION_FILE"
+        [[ ! -f "$REVIEW_SESSION_FILE" ]] && REVIEW_SESSION_FILE=""
+
+        REVIEW_PROMPT=$(SESSION_FILE="$REVIEW_SESSION_FILE" envsubst '$PROJECT_DIR $PROJECT_NAME $GIT_MODE $BACKLOG_FILE $GUARDRAILS_FILE $PROGRESS_FILE $ERRORS_LOG $CLAUDE_MD $ACTIVITY_LOG $SESSION_FILE' < "$ATLAS_HOME/review_prompt.md")
 
         if [[ "$REVIEW_DRY_RUN" == "true" ]]; then
             REVIEW_PROMPT="$REVIEW_PROMPT
@@ -469,13 +579,16 @@ GITIGNORE
         echo "   Mode: $REVIEW_MODE_LABEL"
         echo ""
 
+        PROMPT_FILE_TMP=$(mktemp)
+        printf '%s\n' "$REVIEW_PROMPT" > "$PROMPT_FILE_TMP"
+
         if [[ "$ATLAS_CLI" == "codex" ]]; then
             mkdir -p "$RUNS_DIR"
             REVIEW_RUN_TAG="$(date +%Y%m%d-%H%M%S)-$$"
             REVIEW_LOG_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG.log"
             REVIEW_LAST_MESSAGE_FILE="$RUNS_DIR/review-$REVIEW_RUN_TAG-last-message.txt"
 
-            if codex exec --yolo -o "$REVIEW_LAST_MESSAGE_FILE" "$REVIEW_PROMPT" > "$REVIEW_LOG_FILE" 2>&1; then
+            if run_provider review "$PROMPT_FILE_TMP" "" "$REVIEW_LAST_MESSAGE_FILE" > "$REVIEW_LOG_FILE" 2>&1; then
                 echo "✅ Codex review completed (non-interactive mode)"
                 echo "   Log: $REVIEW_LOG_FILE"
             else
@@ -485,8 +598,10 @@ GITIGNORE
                 exit 1
             fi
         else
-            run_provider review "$REVIEW_PROMPT"
+            run_provider review "$PROMPT_FILE_TMP"
         fi
+
+        cleanup_prompt_file
 
         exit 0
         ;;
@@ -506,17 +621,14 @@ GITIGNORE
         fi
 
         SESSION_STATUS="not-found"
-        if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
+        if [[ -f "$SESSION_FILE" ]]; then
             SESSION_STATUS="kept"
-            SESSION_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
-            SESSION_BRANCH=$(json_get "branch" "$ATLAS_DIR/integration-session.json")
-            PR_STATE="UNKNOWN"
-            if command -v gh >/dev/null 2>&1 && [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
-                PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
-            fi
+            SESSION_PR=$(json_get "pr_number" "$SESSION_FILE")
+            SESSION_BRANCH=$(json_get "branch" "$SESSION_FILE")
+            PR_STATE=$(get_pr_state "$SESSION_PR")
 
             if [[ "$CLEAN_ALL" == "true" || "$PR_STATE" == "MERGED" || "$PR_STATE" == "CLOSED" ]]; then
-                rm -f "$ATLAS_DIR/integration-session.json"
+                rm -f "$SESSION_FILE"
                 SESSION_STATUS="removed"
                 if [[ -n "$SESSION_BRANCH" ]] && git show-ref --verify --quiet "refs/heads/$SESSION_BRANCH" 2>/dev/null; then
                     git branch -D "$SESSION_BRANCH" 2>/dev/null || true
@@ -546,7 +658,13 @@ GITIGNORE
         LOG_FILES=()
         while IFS= read -r -d '' f; do
             LOG_FILES+=("$f")
-        done < <(find "$RUNS_DIR" -maxdepth 1 -name '*.log' -printf '%T@\t%p\0' 2>/dev/null | sort -z -t$'\t' -k1,1rn | cut -z -f2-)
+        done < <(
+            while IFS= read -r -d '' f; do
+                printf '%s\t%s\0' "$(file_mtime "$f")" "$f"
+            done < <(find "$RUNS_DIR" -maxdepth 1 -name '*.log' -print0 2>/dev/null) |
+                sort -z -t$'\t' -k1,1rn |
+                cut -z -f2-
+        )
 
         if [[ ${#LOG_FILES[@]} -eq 0 ]]; then
             echo "No iteration logs found in $RUNS_DIR/"
@@ -578,7 +696,7 @@ GITIGNORE
             esac
 
             local mod_epoch mod_date
-            mod_epoch=$(stat -c '%Y' "$logfile" 2>/dev/null || stat -f '%m' "$logfile" 2>/dev/null)
+            mod_epoch=$(file_mtime "$logfile")
             mod_date=$(date -d "@$mod_epoch" '+%Y-%m-%d %H:%M' 2>/dev/null || date -r "$mod_epoch" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "unknown")
 
             printf "[%s] %s  %-40s  %s\n" "$emoji" "$mod_date" "$task_line" "$status_line"
@@ -619,15 +737,15 @@ GITIGNORE
     status)
         [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 
-        read TODO_N IP_N DONE_N <<< $(count_tasks "$BACKLOG_FILE")
+        IFS=' ' read -r TODO_N IP_N DONE_N <<< "$(count_tasks "$BACKLOG_FILE")"
 
         echo "Atlas Status - $PROJECT_NAME"
         echo ""
         echo "Tasks:  TODO=$TODO_N  IN_PROGRESS=$IP_N  DONE=$DONE_N"
 
-        if [[ -f "$ATLAS_DIR/integration-session.json" ]]; then
-            S_NAME=$(json_get "session_name" "$ATLAS_DIR/integration-session.json")
-            S_PR=$(json_get "pr_number" "$ATLAS_DIR/integration-session.json")
+        if [[ -f "$SESSION_FILE" ]]; then
+            S_NAME=$(json_get "session_name" "$SESSION_FILE")
+            S_PR=$(json_get "pr_number" "$SESSION_FILE")
             echo "Session: $S_NAME (PR #$S_PR)"
         else
             echo "Session: none"
@@ -703,33 +821,7 @@ if [[ "$COMMAND" == "run" ]]; then
     fi
 fi
 
-# Validate that the selected AI CLI is installed
-case "$ATLAS_CLI" in
-    claudecode)
-        if ! command -v claude >/dev/null 2>&1; then
-            echo "❌ Error: Claude Code not found"
-            echo "   Install it: https://docs.anthropic.com/en/docs/claude-code"
-            echo "   Or use OpenCode: curl -fsSL https://opencode.ai/install | bash"
-            exit 1
-        fi
-        ;;
-    opencode)
-        if ! command -v opencode >/dev/null 2>&1; then
-            echo "❌ Error: OpenCode not found"
-            echo "   Install it: curl -fsSL https://opencode.ai/install | bash"
-            echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
-            exit 1
-        fi
-        ;;
-    codex)
-        if ! command -v codex >/dev/null 2>&1; then
-            echo "❌ Error: Codex CLI not found"
-            echo "   Install it: npm install -g @openai/codex"
-            echo "   Or use Claude Code: https://docs.anthropic.com/en/docs/claude-code"
-            exit 1
-        fi
-        ;;
-esac
+validate_cli_installed
 
 if [[ -z "${MAX_ITERATIONS:-}" ]]; then
     MAX_ITERATIONS="${ATLAS_MAX_ITERATIONS:-$DEFAULT_MAX_ITERATIONS}"
@@ -741,9 +833,8 @@ TIMEOUT_SECONDS="${ATLAS_TIMEOUT:-$DEFAULT_TIMEOUT}"
 [[ ! -d "$ATLAS_DIR" ]] && { echo "Error: .atlas/ not found. Run 'atlas init' first."; exit 1; }
 [[ ! -f "$BACKLOG_FILE" ]] && { echo "Error: .atlas/backlog.md not found. Run 'atlas init' or create it manually."; exit 1; }
 [[ ! -f "$ATLAS_HOME/prompt.md" ]] && { echo "Error: prompt.md not found in $ATLAS_HOME. Run 'npm update -g @jxtools/atlas' to fix."; exit 1; }
+require_command envsubst "Install gettext to run Atlas prompts."
 mkdir -p "$RUNS_DIR"
-
-log_activity() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ACTIVITY_LOG"; }
 
 # Check for stale tasks in IN_PROGRESS and move back to TODO
 reset_stale_tasks() {
@@ -772,7 +863,7 @@ reset_stale_tasks() {
         local latest_run
         latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
         [[ -z "$latest_run" ]] && return
-        started_ts=$(stat -c %Y "$latest_run" 2>/dev/null || stat -f %m "$latest_run" 2>/dev/null)
+        started_ts=$(file_mtime "$latest_run")
     fi
 
     age=$((now - started_ts))
@@ -801,8 +892,6 @@ reset_stale_tasks() {
     echo "✓ Task moved back to TODO"
 }
 
-git_head() { git rev-parse --short HEAD 2>/dev/null || echo ""; }
-
 send_notification() {
     [[ "$NOTIFY_TELEGRAM" == "true" ]] && [[ -x "$ATLAS_HOME/notify-telegram.sh" ]] && "$ATLAS_HOME/notify-telegram.sh" "$1" "$MAX_ITERATIONS" "$PROJECT_NAME" "$2" &
 }
@@ -815,11 +904,12 @@ MAX_CONSECUTIVE_ERRORS=3
 cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
-    [[ -n "$PROMPT_FILE_TMP" ]] && rm -f "$PROMPT_FILE_TMP"
+    cleanup_prompt_file
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
     [[ "$GIT_MODE" == "true" && -n "${DEFAULT_BRANCH:-}" ]] && git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
     exit 130
 }
+trap cleanup_prompt_file EXIT
 trap cleanup SIGINT SIGTERM
 
 echo "╔═══════════════════════════════════════════════════════╗"
@@ -836,25 +926,17 @@ log_activity "RUN START run=$RUN_TAG iterations=$MAX_ITERATIONS"
 
 reset_stale_tasks
 
-# Si estamos en resume mode, saltar setup de branch (ya hicimos checkout)
+# Skip branch setup in resume mode because checkout already happened.
 if [[ "${RESUME_MODE:-false}" == "true" ]]; then
     export GIT_MODE="true"
-    export DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
-    if [[ -z "$DEFAULT_BRANCH" ]]; then
-        DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
-        [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH="main"
-    fi
+    export DEFAULT_BRANCH="$(detect_default_branch)"
     echo "📍 Resumed session - skipping branch setup"
     echo ""
 elif [[ -d "$PROJECT_DIR/.git" ]]; then
     export GIT_MODE="true"
 
     # Detect default branch (main, master, or configured)
-    export DEFAULT_BRANCH="${ATLAS_DEFAULT_BRANCH:-}"
-    if [[ -z "$DEFAULT_BRANCH" ]]; then
-        DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || DEFAULT_BRANCH="main"
-        [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH="main"
-    fi
+    export DEFAULT_BRANCH="$(detect_default_branch)"
 
     # CRITICAL: Always start from default branch to ensure clean state
     echo "📍 Ensuring clean git state..."
@@ -896,15 +978,15 @@ elif [[ -d "$PROJECT_DIR/.git" ]]; then
     git pull origin "$DEFAULT_BRANCH" 2>/dev/null || echo "   ⚠️  Could not pull (offline or no remote)"
 
     # Check for merged integration session and cleanup
-    if [[ -f ".atlas/integration-session.json" ]]; then
-        SESSION_PR=$(json_get "pr_number" .atlas/integration-session.json)
+    if [[ -f "$SESSION_FILE" ]]; then
+        SESSION_PR=$(json_get "pr_number" "$SESSION_FILE")
         if [[ -n "$SESSION_PR" && "$SESSION_PR" != "null" ]]; then
-            PR_STATE=$(gh pr view "$SESSION_PR" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
+            PR_STATE=$(get_pr_state "$SESSION_PR")
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
-                OLD_BRANCH=$(json_get "branch" .atlas/integration-session.json)
+                OLD_BRANCH=$(json_get "branch" "$SESSION_FILE")
                 [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
-                rm -f .atlas/integration-session.json
+                rm -f "$SESSION_FILE"
                 echo "   ✓ Cleaned up. New session will be created."
             fi
         fi
@@ -917,11 +999,10 @@ else
     echo ""
 fi
 
-for i in $(seq 1 $MAX_ITERATIONS); do
+for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "═══ ITERATION $i/$MAX_ITERATIONS ═══"
 
     ITER_START=$(date +%s)
-    HEAD_BEFORE=$(git_head)
     LOG_FILE="$RUNS_DIR/run-$RUN_TAG-iter-$i.log"
 
     log_activity "ITERATION $i START"
@@ -938,8 +1019,8 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 - $ERRORS_LOG (recent failures)"
     [[ -f "CLAUDE.md" ]] && CONTEXT_FILES="$CONTEXT_FILES
 - CLAUDE.md (project rules and quality gates)"
-    [[ -f ".atlas/integration-session.json" ]] && CONTEXT_FILES="$CONTEXT_FILES
-- .atlas/integration-session.json (INTEGRATION SESSION - use branch as BASE_BRANCH)"
+    [[ -f "$SESSION_FILE" ]] && CONTEXT_FILES="$CONTEXT_FILES
+- $SESSION_FILE (INTEGRATION SESSION - use branch as BASE_BRANCH)"
 
     # Extract spec file from CURRENT task only (IN_PROGRESS first, then first TODO)
     SPEC_FILE=""
@@ -1004,24 +1085,17 @@ $PROMPT_CONTENT"
         RETRY_COUNT=$((RETRY_COUNT + 1))
 
         # Run AI CLI and capture output
-        if [[ "$ATLAS_CLI" == "opencode" ]]; then
-            export OPENCODE_PERMISSION='{"*":"allow"}'
-            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" opencode run --agent build "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
-        elif [[ "$ATLAS_CLI" == "codex" ]]; then
-            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" codex exec --yolo "$(cat "$PROMPT_FILE_TMP")" 2>&1) || true
-        else
-            OUTPUT=$(run_with_timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions -p < "$PROMPT_FILE_TMP" 2>&1) || true
-        fi
+        OUTPUT=$(run_provider build "$PROMPT_FILE_TMP" "$TIMEOUT_SECONDS" 2>&1) || true
 
         # Check for CLI errors
         CLI_ERROR=""
         if [[ -z "$OUTPUT" ]]; then
             CLI_ERROR="No output captured"
-        elif echo "$OUTPUT" | grep -q "Error: No messages returned"; then
+        elif [[ "$OUTPUT" == *"Error: No messages returned"* ]]; then
             CLI_ERROR="API rate limit or timeout"
-        elif echo "$OUTPUT" | grep -q "Error: API"; then
+        elif [[ "$OUTPUT" == *"Error: API"* ]]; then
             CLI_ERROR="API error"
-        elif echo "$OUTPUT" | grep -q "Error: Network"; then
+        elif [[ "$OUTPUT" == *"Error: Network"* ]]; then
             CLI_ERROR="Network error"
         fi
 
@@ -1040,7 +1114,7 @@ $PROMPT_CONTENT"
         fi
     done
 
-    rm -f "$PROMPT_FILE_TMP"
+    cleanup_prompt_file
 
     # Handle complete failure after all retries exhausted
     if [[ "$CLI_SUCCESS" == "false" ]]; then
@@ -1048,7 +1122,7 @@ $PROMPT_CONTENT"
         echo "❌ Failed after $MAX_RETRIES attempts"
         echo "$OUTPUT" > "$LOG_FILE"
 
-        read ERROR_TODO ERROR_IP ERROR_DONE <<< $(count_tasks "$BACKLOG_FILE")
+        IFS=' ' read -r ERROR_TODO ERROR_IP ERROR_DONE <<< "$(count_tasks "$BACKLOG_FILE")"
 
         if [[ $CONSECUTIVE_ERRORS -ge $MAX_CONSECUTIVE_ERRORS ]]; then
             echo "🛑 Too many consecutive failed iterations ($CONSECUTIVE_ERRORS). Stopping run."
@@ -1076,13 +1150,12 @@ Pending: $ERROR_TODO"
 
     ITER_END=$(date +%s)
     ITER_DURATION=$((ITER_END - ITER_START))
-    HEAD_AFTER=$(git_head)
 
     SUMMARY=$(echo "$OUTPUT" | sed -n '/=== SUMMARY ===/,/Loop:/p' | head -10)
     [[ -z "$SUMMARY" ]] && SUMMARY="No summary found"
 
     # Bash-verified task count (don't trust model's count)
-    read TODO_COUNT IN_PROGRESS_COUNT DONE_COUNT <<< $(count_tasks "$BACKLOG_FILE")
+    IFS=' ' read -r TODO_COUNT IN_PROGRESS_COUNT DONE_COUNT <<< "$(count_tasks "$BACKLOG_FILE")"
     echo ""
     echo "📊 Pending: $TODO_COUNT"
 
@@ -1093,14 +1166,14 @@ Pending: $TODO_COUNT"
     log_activity "ITERATION $i END duration=${ITER_DURATION}s pending=$TODO_COUNT"
     send_notification "$i" "$SUMMARY"
 
-    if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+    if [[ "$OUTPUT" == *"<promise>COMPLETE</promise>"* ]]; then
         echo ""; echo "✅ ALL TASKS COMPLETED!"
         log_activity "RUN COMPLETE run=$RUN_TAG"
         [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
         exit 0
     fi
 
-    sleep 2
+    sleep "${ATLAS_SLEEP_BETWEEN:-2}"
 done
 
 [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true

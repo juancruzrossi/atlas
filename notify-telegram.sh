@@ -20,6 +20,14 @@ MAX_ITERATIONS="$2"
 PROJECT_NAME="$3"
 SUMMARY="$4"
 
+html_escape() {
+    local value="$1"
+    value=${value//&/&amp;}
+    value=${value//</&lt;}
+    value=${value//>/&gt;}
+    printf '%s' "$value"
+}
+
 # Progress bar
 progress_bar() {
     local current=$1
@@ -69,6 +77,10 @@ elif [[ "$STATUS" == UNKNOWN* ]]; then
     STATUS_EMOJI="❓"
 fi
 
+SAFE_PROJECT_NAME=$(html_escape "$PROJECT_NAME")
+SAFE_TASK=$(html_escape "${TASK:-No task}")
+SAFE_PENDING=$(html_escape "${PENDING:-?}")
+
 # Determine footer
 FOOTER=""
 if [[ "$PENDING" == "0" ]]; then
@@ -80,20 +92,22 @@ elif [[ "$ITERATION" == "$MAX_ITERATIONS" ]]; then
 fi
 
 # Build message
-MESSAGE="<b>Atlas</b> › <code>${PROJECT_NAME}</code>
+MESSAGE="<b>Atlas</b> › <code>${SAFE_PROJECT_NAME}</code>
 
 Iteration <b>${ITERATION}</b>/${MAX_ITERATIONS}  $PROGRESS
 
-$STATUS_EMOJI  <b>${TASK:-No task}</b>
-📋  <b>${PENDING:-?}</b> pending in backlog${FOOTER}
+$STATUS_EMOJI  <b>${SAFE_TASK}</b>
+📋  <b>${SAFE_PENDING}</b> pending in backlog${FOOTER}
 
 <i>${TIMESTAMP}</i>"
 
 # Send to Telegram
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+if ! curl -fsS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
     -d "chat_id=${CHAT_ID}" \
     -d "parse_mode=HTML" \
     --data-urlencode "text=${MESSAGE}" \
-    > /dev/null 2>&1
+    > /dev/null 2>&1; then
+    echo "Warning: failed to send Telegram notification" >&2
+fi
 
 exit 0

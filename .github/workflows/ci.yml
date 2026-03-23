@@ -19,8 +19,24 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
       - name: Install dev dependencies
         run: npm install --ignore-scripts
+
+      - name: Verify atlas.sh fallback version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          FALLBACK_VERSION=$(grep -Eo 'ATLAS_VERSION=\"[0-9]+\.[0-9]+\.[0-9]+\"' atlas.sh | head -1 | cut -d'"' -f2)
+
+          if [ "$PACKAGE_VERSION" != "$FALLBACK_VERSION" ]; then
+            echo "package.json version ($PACKAGE_VERSION) does not match atlas.sh fallback ($FALLBACK_VERSION)"
+            exit 1
+          fi
+
+      - name: Run shellcheck
+        run: shellcheck atlas.sh notify-telegram.sh
 
       - name: Run tests
         run: npm test

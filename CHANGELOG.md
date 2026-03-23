@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-03-23
+
+### Fixed
+- **Provider prompt handling**: Centralized provider invocation now reads prompts from temp files, avoids `ARG_MAX` risk for Codex, and keeps OpenCode/Codex invocation consistent across plan/review/run
+- **Task counting under `set -e`**: Replaced unsafe post-increment operations in `count_tasks()` to avoid silent aborts on the first task per section
+- **Session/git helpers**: Deduplicated PR state lookup and default branch detection, standardized integration session file usage, and hardened prompt temp-file cleanup
+- **Command prerequisites**: `atlas plan`, `atlas review`, and run mode now fail fast with a clear `envsubst`/gettext requirement instead of failing later in prompt rendering
+- **Logs + runtime loop**: `atlas logs` no longer depends on GNU `find -printf`, the main loop removes unused git HEAD reads, avoids `echo | grep` error checks, and uses a bash-native iteration loop
+- **Telegram notifications**: Escapes HTML-sensitive values before sending messages and now logs a warning when `curl` fails
+- **Postinstall visibility**: Skill copy/chmod failures in `scripts/postinstall.js` now emit warnings to `stderr` instead of failing silently
+- **CI/release consistency**: CI now verifies the fallback version, runs `shellcheck`, and release publishing uses the same Node.js LTS version as CI
+
 ## [3.2.0] - 2026-02-21
 
 ### Added
