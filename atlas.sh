@@ -36,7 +36,7 @@ json_get() {
 
 # Atlas version (read from package.json, fallback to hardcoded)
 ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
-[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.3"
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.4"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -455,7 +455,7 @@ GITIGNORE
         export FEATURE_REQUEST="$FEATURE_PROMPT"
         export PROJECT_DIR PROJECT_NAME SPEC_FILE BACKLOG_FILE
         require_command envsubst "Install gettext to use 'atlas plan'."
-        PLAN_PROMPT=$(envsubst '$FEATURE_REQUEST $PROJECT_DIR $PROJECT_NAME $SPEC_FILE $BACKLOG_FILE' < "$ATLAS_HOME/plan_prompt.md")
+        PLAN_PROMPT=$(envsubst "\$FEATURE_REQUEST \$PROJECT_DIR \$PROJECT_NAME \$SPEC_FILE \$BACKLOG_FILE" < "$ATLAS_HOME/plan_prompt.md")
 
         echo "╔═══════════════════════════════════════════════════════╗"
         echo "║  Atlas Plan - Feature Interview                       ║"
@@ -557,7 +557,7 @@ GITIGNORE
         REVIEW_SESSION_FILE="$SESSION_FILE"
         [[ ! -f "$REVIEW_SESSION_FILE" ]] && REVIEW_SESSION_FILE=""
 
-        REVIEW_PROMPT=$(SESSION_FILE="$REVIEW_SESSION_FILE" envsubst '$PROJECT_DIR $PROJECT_NAME $GIT_MODE $BACKLOG_FILE $GUARDRAILS_FILE $PROGRESS_FILE $ERRORS_LOG $CLAUDE_MD $ACTIVITY_LOG $SESSION_FILE' < "$ATLAS_HOME/review_prompt.md")
+        REVIEW_PROMPT=$(SESSION_FILE="$REVIEW_SESSION_FILE" envsubst "\$PROJECT_DIR \$PROJECT_NAME \$GIT_MODE \$BACKLOG_FILE \$GUARDRAILS_FILE \$PROGRESS_FILE \$ERRORS_LOG \$CLAUDE_MD \$ACTIVITY_LOG \$SESSION_FILE" < "$ATLAS_HOME/review_prompt.md")
 
         if [[ "$REVIEW_DRY_RUN" == "true" ]]; then
             REVIEW_PROMPT="$REVIEW_PROMPT
@@ -686,7 +686,7 @@ GITIGNORE
             [[ -z "$status_line" ]] && status_line="Status: UNKNOWN"
 
             local status_val
-            status_val=$(echo "$status_line" | sed 's/Status: //')
+            status_val="${status_line#Status: }"
 
             local emoji="  "
             case "$status_val" in
@@ -861,7 +861,18 @@ reset_stale_tasks() {
     if [[ -z "$started_ts" ]]; then
         # Fallback: use most recent run log modification time
         local latest_run
-        latest_run=$(ls -t "$RUNS_DIR"/*.log 2>/dev/null | head -1)
+        latest_run=$(
+            while IFS= read -r -d '' file; do
+                printf '%s\n' "$file"
+                break
+            done < <(
+                while IFS= read -r -d '' file; do
+                    printf '%s\t%s\0' "$(file_mtime "$file")" "$file"
+                done < <(find "$RUNS_DIR" -maxdepth 1 -name '*.log' -print0 2>/dev/null) |
+                    sort -z -t$'\t' -k1,1rn |
+                    cut -z -f2-
+            )
+        )
         [[ -z "$latest_run" ]] && return
         started_ts=$(file_mtime "$latest_run")
     fi
@@ -901,12 +912,15 @@ CONSECUTIVE_ERRORS=0
 MAX_CONSECUTIVE_ERRORS=3
 
 # Handle Ctrl+C gracefully
+# shellcheck disable=SC2317,SC2329
 cleanup() {
     echo ""
     echo "⛔ Interrupted by user"
     cleanup_prompt_file
     log_activity "RUN INTERRUPTED run=$RUN_TAG"
-    [[ "$GIT_MODE" == "true" && -n "${DEFAULT_BRANCH:-}" ]] && git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
+    if [[ "$GIT_MODE" == "true" && -n "${DEFAULT_BRANCH:-}" ]]; then
+        git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
+    fi
     exit 130
 }
 trap cleanup_prompt_file EXIT
@@ -929,14 +943,16 @@ reset_stale_tasks
 # Skip branch setup in resume mode because checkout already happened.
 if [[ "${RESUME_MODE:-false}" == "true" ]]; then
     export GIT_MODE="true"
-    export DEFAULT_BRANCH="$(detect_default_branch)"
+    DEFAULT_BRANCH="$(detect_default_branch)"
+    export DEFAULT_BRANCH
     echo "📍 Resumed session - skipping branch setup"
     echo ""
 elif [[ -d "$PROJECT_DIR/.git" ]]; then
     export GIT_MODE="true"
 
     # Detect default branch (main, master, or configured)
-    export DEFAULT_BRANCH="$(detect_default_branch)"
+    DEFAULT_BRANCH="$(detect_default_branch)"
+    export DEFAULT_BRANCH
 
     # CRITICAL: Always start from default branch to ensure clean state
     echo "📍 Ensuring clean git state..."
@@ -1060,7 +1076,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     export ITERATION="$i"
 
     # Process prompt.md with variable substitution
-    PROMPT_CONTENT=$(envsubst '$PROJECT_DIR $PROJECT_NAME $RUN_ID $ITERATION $GIT_MODE' < "$ATLAS_HOME/prompt.md")
+    PROMPT_CONTENT=$(envsubst "\$PROJECT_DIR \$PROJECT_NAME \$RUN_ID \$ITERATION \$GIT_MODE" < "$ATLAS_HOME/prompt.md")
 
     # Build prompt with processed instructions inline
     PROMPT="CONTEXT_FILES:$CONTEXT_FILES
@@ -1122,7 +1138,7 @@ $PROMPT_CONTENT"
         echo "❌ Failed after $MAX_RETRIES attempts"
         echo "$OUTPUT" > "$LOG_FILE"
 
-        IFS=' ' read -r ERROR_TODO ERROR_IP ERROR_DONE <<< "$(count_tasks "$BACKLOG_FILE")"
+        IFS=' ' read -r ERROR_TODO _ _ <<< "$(count_tasks "$BACKLOG_FILE")"
 
         if [[ $CONSECUTIVE_ERRORS -ge $MAX_CONSECUTIVE_ERRORS ]]; then
             echo "🛑 Too many consecutive failed iterations ($CONSECUTIVE_ERRORS). Stopping run."
@@ -1155,7 +1171,7 @@ Pending: $ERROR_TODO"
     [[ -z "$SUMMARY" ]] && SUMMARY="No summary found"
 
     # Bash-verified task count (don't trust model's count)
-    IFS=' ' read -r TODO_COUNT IN_PROGRESS_COUNT DONE_COUNT <<< "$(count_tasks "$BACKLOG_FILE")"
+    IFS=' ' read -r TODO_COUNT _ _ <<< "$(count_tasks "$BACKLOG_FILE")"
     echo ""
     echo "📊 Pending: $TODO_COUNT"
 
