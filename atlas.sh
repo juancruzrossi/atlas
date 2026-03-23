@@ -36,7 +36,7 @@ json_get() {
 
 # Atlas version (read from package.json, fallback to hardcoded)
 ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
-[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.4"
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.5"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -1001,7 +1001,9 @@ elif [[ -d "$PROJECT_DIR/.git" ]]; then
             if [[ "$PR_STATE" == "MERGED" ]]; then
                 echo "   🧹 Cleaning up merged integration session (PR #$SESSION_PR)..."
                 OLD_BRANCH=$(json_get "branch" "$SESSION_FILE")
-                [[ -n "$OLD_BRANCH" ]] && git branch -D "$OLD_BRANCH" 2>/dev/null || true
+                if [[ -n "$OLD_BRANCH" ]]; then
+                    git branch -D "$OLD_BRANCH" 2>/dev/null || true
+                fi
                 rm -f "$SESSION_FILE"
                 echo "   ✓ Cleaned up. New session will be created."
             fi
@@ -1185,14 +1187,18 @@ Pending: $TODO_COUNT"
     if [[ "$OUTPUT" == *"<promise>COMPLETE</promise>"* ]]; then
         echo ""; echo "✅ ALL TASKS COMPLETED!"
         log_activity "RUN COMPLETE run=$RUN_TAG"
-        [[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
+        if [[ "$GIT_MODE" == "true" ]]; then
+            git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
+        fi
         exit 0
     fi
 
     sleep "${ATLAS_SLEEP_BETWEEN:-2}"
 done
 
-[[ "$GIT_MODE" == "true" ]] && git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
+if [[ "$GIT_MODE" == "true" ]]; then
+    git checkout "${DEFAULT_BRANCH:-main}" 2>/dev/null || true
+fi
 echo ""; echo "🤖 MAX ITERATIONS REACHED"
 log_activity "RUN END run=$RUN_TAG (max iterations)"
 exit 0
