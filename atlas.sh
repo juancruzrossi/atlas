@@ -36,7 +36,7 @@ json_get() {
 
 # Atlas version (read from package.json, fallback to hardcoded)
 ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
-[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.2"
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.3"
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
