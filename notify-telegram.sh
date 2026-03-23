@@ -50,9 +50,12 @@ STATUS_LINE=$(echo "$SUMMARY" | grep -E "^Status:" | head -1)
 PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pending:" | tail -1)
 
 # Clean values
-TASK=$(echo "$TASK_LINE" | sed 's/^Task: *//')
-STATUS=$(echo "$STATUS_LINE" | sed 's/^Status: *//')
-PENDING=$(echo "$PENDING_LINE" | sed 's/^Pending: *//')
+TASK="${TASK_LINE#Task: }"
+TASK="${TASK#"${TASK%%[![:space:]]*}"}"
+STATUS="${STATUS_LINE#Status: }"
+STATUS="${STATUS#"${STATUS%%[![:space:]]*}"}"
+PENDING="${PENDING_LINE#Pending: }"
+PENDING="${PENDING#"${PENDING%%[![:space:]]*}"}"
 
 # Handle empty summary (output capture failed)
 if [[ -z "$TASK" && -z "$STATUS" ]]; then
