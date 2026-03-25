@@ -36,7 +36,34 @@ json_get() {
 
 # Atlas version (read from package.json, fallback to hardcoded)
 ATLAS_VERSION=$(json_get "version" "$ATLAS_HOME/package.json")
-[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.5"
+[[ -z "$ATLAS_VERSION" ]] && ATLAS_VERSION="3.2.6"
+
+atlas_saved_registry() {
+    local registry_file="$ATLAS_HOME/.npm-registry"
+    [[ ! -f "$registry_file" ]] && return
+    awk 'NF { print; exit }' "$registry_file"
+}
+
+atlas_npm_registry() {
+    if [[ -n "${npm_config_registry:-}" ]]; then
+        printf '%s\n' "$npm_config_registry"
+        return
+    fi
+
+    if [[ -n "${NPM_CONFIG_REGISTRY:-}" ]]; then
+        printf '%s\n' "$NPM_CONFIG_REGISTRY"
+        return
+    fi
+
+    local saved_registry
+    saved_registry="$(atlas_saved_registry)"
+    if [[ -n "$saved_registry" ]]; then
+        printf '%s\n' "$saved_registry"
+        return
+    fi
+
+    npm config get registry 2>/dev/null || true
+}
 
 # AI Provider configuration (claudecode | opencode | codex)
 # Priority: --cli flag > ATLAS_CLI env var > default (claudecode)
@@ -425,16 +452,23 @@ GITIGNORE
         exit 0
         ;;
     update)
+        registry="$(atlas_npm_registry)"
+        update_command="npm update -g @jxtools/atlas"
+        latest_command="npm view @jxtools/atlas version"
+        if [[ -n "$registry" ]]; then
+            update_command="$update_command --registry $registry"
+            latest_command="$latest_command --registry $registry"
+        fi
         echo "Atlas is now distributed via NPM."
         echo ""
         echo "To update, run:"
-        echo "  npm update -g @jxtools/atlas"
+        echo "  $update_command"
         echo ""
         echo "To check your current version:"
         echo "  atlas --version"
         echo ""
         echo "To check the latest available version:"
-        echo "  npm view @jxtools/atlas version"
+        echo "  $latest_command"
         exit 0
         ;;
     plan)

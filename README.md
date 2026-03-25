@@ -28,6 +28,12 @@ Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes
 npm install -g @jxtools/atlas
 ```
 
+If your environment requires an explicit npm registry:
+
+```bash
+npm install -g @jxtools/atlas --registry https://registry.npmjs.org/
+```
+
 ## Update
 
 ```bash

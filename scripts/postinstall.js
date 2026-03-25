@@ -9,9 +9,24 @@ const atlasHome = resolve(__dirname, '..')
 const skillsDir = join(atlasHome, 'skills')
 const homeDir = process.env.HOME || process.env.USERPROFILE
 const MANIFEST_NAME = '.atlas-skills-manifest.json'
+const REGISTRY_FILE = join(atlasHome, '.npm-registry')
 
 function warn(message) {
   process.stderr.write(`Warning: ${message}\n`)
+}
+
+function resolveRegistry(env) {
+  const explicit = env.npm_config_registry || env.NPM_CONFIG_REGISTRY
+  if (explicit) return explicit
+
+  try {
+    return execSync('npm config get registry', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
 }
 
 if (!existsSync(skillsDir)) process.exit(0)
@@ -21,6 +36,15 @@ const skillDirs = readdirSync(skillsDir).filter(d =>
 )
 
 if (skillDirs.length === 0) process.exit(0)
+
+const registry = resolveRegistry(process.env)
+if (registry) {
+  try {
+    writeFileSync(REGISTRY_FILE, `${registry}\n`)
+  } catch (error) {
+    warn(`could not persist npm registry: ${error.message}`)
+  }
+}
 
 const providers = []
 
