@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/atlas",
-  "version": "3.2.5",
+  "version": "3.2.6",
   "description": "Autonomous Task Loop Agent System - automates task processing using AI coding agents",
   "bin": {
     "atlas": "atlas.sh"
