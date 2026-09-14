@@ -29,7 +29,7 @@ function resolveRegistry(env) {
   }
 }
 
-if (!existsSync(skillsDir)) process.exit(0)
+if (!homeDir || !existsSync(skillsDir)) process.exit(0)
 
 const skillDirs = readdirSync(skillsDir).filter(d =>
   d.startsWith('atlas-') && existsSync(join(skillsDir, d, 'SKILL.md'))
@@ -90,7 +90,10 @@ for (const targetDir of providers) {
   for (const skill of skillDirs) {
     const srcDir = join(skillsDir, skill)
     const destDir = join(targetDir, skill)
-    mkdirSync(destDir, { recursive: true })
+    try { mkdirSync(destDir, { recursive: true }) } catch (error) {
+      warn(`could not create skill directory '${destDir}': ${error.message}`)
+      continue
+    }
 
     for (const file of getSkillFiles(srcDir)) {
       const srcFile = join(srcDir, file)
@@ -104,13 +107,12 @@ for (const targetDir of providers) {
         const lastKnownHash = manifest[manifestKey]
 
         // File was customized by user (hash differs from what we installed)
-        if (lastKnownHash && destHash !== lastKnownHash && destHash !== srcHash) {
+        if (destHash !== srcHash && (!lastKnownHash || destHash !== lastKnownHash)) {
           try {
             cpSync(srcFile, destFile + '.new')
           } catch (error) {
             warn(`could not preserve updated skill '${manifestKey}' as '.new': ${error.message}`)
           }
-          newManifest[manifestKey] = srcHash
           continue
         }
       }
@@ -124,7 +126,9 @@ for (const targetDir of providers) {
     }
   }
 
-  saveManifest(targetDir, newManifest)
+  try { saveManifest(targetDir, newManifest) } catch (error) {
+    warn(`could not save skill manifest: ${error.message}`)
+  }
 }
 
 // Ensure atlas.sh is executable

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-09-14
+
+### Changed
+- Replace the monolithic Bash loop with a dependency-free Node runtime and focused modules; retain the npm command and shell entry point.
+- Atlas now owns task selection, validated Markdown transitions, explicit quality gates, commits, and a single integration PR that stays open for review.
+- Use a provider-independent JSON task result plus process exit status and independently executed gates; completion promises no longer control the loop.
+- Stream output to terminal and disk; enforce deadlines and terminate process groups on cancellation or timeout.
+- Persist local and Git sessions, finalization checkpoints, and commit journals for recovery without discarding work or rerunning completed tasks after publication failures.
+- Make review read-only and deterministic, recognize Git worktrees, validate options/configuration early, and expose structured status/logs/diagnostics.
+- Require explicit gates, opt in to Telegram notifications, preserve branch position, and return exit code 2 when the task budget is exhausted with pending work.
+- Remove time-based task resets, implicit retries, runtime skill copying, and the dependency on envsubst, jq, GNU timeout, and platform-specific date/sort behavior.
+
+### Migration
+- Finish or archive legacy integration sessions before upgrading; run `atlas init`, configure `.atlas/config.json`, and commit the project state. See README for complete migration steps.
+
+### Verification
+- Preserve public CLI regression tests and add isolated Node tests for Markdown state, providers, gates, signals, concurrency, Git recovery, and package installation.
+
 ## [3.2.5] - 2026-03-23
 
 ### Fixed

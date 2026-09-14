@@ -83,5 +83,5 @@ teardown() {
     run "$ATLAS" init
     [ "$status" -eq 0 ]
     project_name=$(basename "$TEST_DIR")
-    grep -q "$project_name" ".atlas/backlog.md" || grep -q "PROJECT_NAME" ".atlas/backlog.md" || true
+    grep -Fq "$project_name" ".atlas/backlog.md"
 }

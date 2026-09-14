@@ -1,163 +1,82 @@
-# CLAUDE.md
+# Atlas development instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Critical rules
 
-## Critical Rules
+- Run `npm test` and `npm run check` before creating a PR; all checks must pass.
+- Never commit or push directly to main. Work on a feature/fix branch and use PRs.
+- Use Conventional Commits in English. Respond to the user in Spanish.
+- Only merge when requested. Use squash, `--admin`, and `--delete-branch` with `gh pr merge`.
+- Before creating a PR, suggest a SemVer version and ask whether to use that version or Unreleased.
+- Update package.json, package-lock.json, and CHANGELOG.md together for a release. Every change merged to main needs an appropriate version bump.
+- AGENTS.md and CLAUDE.md must remain byte-for-byte identical.
+- Code comments should be brief, necessary, and in English.
 
-- **ALWAYS run `npm test`** before creating a PR. All tests must pass.
-- **ALWAYS bump the version in `package.json`** after every change merged to main. Use semver: patch for fixes, minor for features, major for breaking.
-- **NEVER push directly to `main`** without admin bypass. Use PRs with squash & merge.
-- When merging PRs with `gh pr merge`, use `--admin` flag to bypass the protection ruleset.
-- Delete branches after merging (`--delete-branch`).
-- Responses in Spanish, code comments in English.
+## Product and architecture
 
-## Project Overview
+Atlas is distributed as `@jxtools/atlas`. It executes Markdown backlog tasks with
+Claude Code, OpenCode, or Codex and leaves an integration PR open for human review.
+The default provider remains claudecode.
 
-Atlas (Autonomous Task Loop Agent System) is a bash-based tool distributed via NPM (`@jxtools/atlas`) that automates task processing using AI coding agents. It reads tasks from a markdown backlog, implements code, runs quality gates, and tracks progress—all autonomously in a loop.
+- `atlas.sh`: small symlink-aware npm entry point, delegates to Node.
+- `lib/cli.js`, `lib/commands.js`: argument validation and user commands.
+- `lib/config.js`: flags, ATLAS_* environment, and project config precedence.
+- `lib/backlog.js`: Markdown parsing, task selection, validated atomic transitions.
+- `lib/storage.js`: atomic state files, execution locks, event log.
+- `lib/process.js`, `lib/providers.js`: provider adapters and process supervision.
+- `lib/runner.js`: task execution, independent gates, finalization, recovery.
+- `lib/git.js`: branch/HEAD invariants, commit journal, single open PR publication.
+- `prompt.md`, `plan_prompt.md`: implementation and interactive planning contracts.
+- `scripts/postinstall.js`: installs bundled skills into available provider directories.
 
-**Modes:**
-- **Git mode** (auto-detected): Creates branches, PRs, commits, and merges
-- **Local mode** (no .git/): Changes stay in working directory, no git operations
+The runtime uses Node standard-library modules with no production dependencies or
+build step. Support Node >=18 on Linux and macOS. Bash is only needed for the
+entry point, Telegram script, and shell gates; no envsubst or GNU utilities required.
 
-## Architecture
+## Runtime invariants
 
-```
-atlas.sh            Main entry point - orchestrates the iteration loop
-prompt.md           System prompt for autonomous iterations
-plan_prompt.md      System prompt for interactive planning mode
-review_prompt.md    System prompt for AI review mode
-notify-telegram.sh  Telegram notifications for iteration progress
-package.json        NPM package configuration (@jxtools/atlas)
-scripts/postinstall.js  Installs skills to AI providers on npm install
-templates/          Initial templates copied on `atlas init`
-references/         Documentation about context engineering and guardrails
-skills/             Skills installed to AI provider directories
-```
+1. Markdown is the task source of truth; config/session JSON never replace it.
+2. Exactly one task can be IN_PROGRESS. Resume it before selecting the first TODO.
+3. Atlas owns backlog, config, session, Git commits, and PRs. Providers implement
+   tasks and write a structured result to a per-attempt path.
+4. DONE requires a valid matching result, successful provider exit, and passing
+   independently executed gates. Never trust stdout completion markers.
+5. Stop and preserve work on failure. Do not retry mutations automatically or
+   reset tasks based on timestamps. Recovery must use current state evidence.
+6. Respect task timeouts and cancellation, reap provider descendants, and release
+   locks. Do not leave background processes after tests or development work.
+7. Keep main unchanged; use one integration branch and PR per session. Never merge
+   PRs in the runtime. Leave the working branch active on failure and completion.
+8. Public status/log/diagnostic commands must remain read-only and work while locked.
+9. Tests must use isolated HOME, fake providers, and temporary Git remotes. Never
+   invoke paid agents or send messages to real recipients as a test.
 
-**Core loop** (`atlas.sh`):
-1. Builds prompt with all context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
-2. Invokes the selected AI provider (claudecode, opencode, or codex) with the prompt
-3. Parses output for `<promise>COMPLETE</promise>` to exit early
-4. Logs iteration to `$RUNS_DIR` and optionally notifies Telegram
+## State and commands
 
-**State files** (in `.atlas/` within target project):
-- `backlog.md` - Task queue (TODO/IN_PROGRESS/DONE/DELAYED sections)
-- `guardrails.md` - Rules learned from past errors (Signs methodology)
-- `progress.txt` - Learnings and context from completed tasks
-- `errors.log` - Recent failure log
-- `activity.log` - Run history
-- `specs/` - Feature specs generated by `atlas plan` (integral view)
-- `runs/` - Per-iteration logs
+`.atlas/` contains config.json, backlog.md, guardrails.md, progress.txt, specs/,
+session.json, runtime.lock, runs/, activity.log, and errors.log. Runtime files are
+ignored by Git. Legacy integration-session.json requires explicit migration.
 
-## Commands
+Commands: init, plan, run (also bare numeric iterations), resume, review, status,
+logs, doctor, clean, update, help. JSON output is supported for status/logs/diagnostics.
+review is deterministic and read-only; --dry-run is retained for compatibility.
+
+Config priority: CLI flags > ATLAS_* environment > .atlas/config.json > defaults.
+Keep provider differences isolated in lib/providers.js. Prompt, skills, README,
+and runner contracts must agree whenever execution behavior changes.
+
+## Verification and delivery
 
 ```bash
-atlas init          # Initialize .atlas/ in current project
-atlas plan "..."    # Interactive planning: interview -> spec -> tasks
-atlas [N]           # Run N iterations autonomously (default: 25)
-atlas review        # AI audit and repair for .atlas state
-atlas resume [N]    # Resume interrupted integration session
-atlas logs          # View iteration logs (--tail N, --failed, --search)
-atlas clean [--all] # Clean runtime files in .atlas/
-atlas update        # Show how to update via NPM
-atlas help          # Show help
+npm ci --ignore-scripts
+npm test
+npm run check
+npm pack --dry-run
 ```
 
-**Planning mode** (`atlas plan`):
-1. Uses `AskUserQuestionTool` to interview about requirements
-2. Generates detailed spec in `.atlas/specs/spec-YYYYMMDD-HHMMSS.md`
-3. Decomposes into tasks with `**Spec:**` field in backlog.md
-4. Tasks reference spec for "integral view" during autonomous execution
+Node tests exercise actual CLI invocations, state transitions, signals, Git
+recovery, and package installation using isolated fixtures. Bats retains public
+CLI regression coverage. CI runs Linux/macOS on Node 18/24.
 
-## Development
-
-This is a pure bash project distributed as an NPM package. No build step required.
-
-**Testing:**
-```bash
-npm test            # Run bats test suite (51 tests)
-./atlas.sh help     # Smoke test
-npm pack --dry-run  # Verify included files
-```
-
-**Key environment variables:**
-- `ATLAS_MAX_ITERATIONS` - Max iterations per run (default: 25)
-- `ATLAS_TIMEOUT` - Timeout per iteration in seconds (default: 1200)
-- `ATLAS_STALE_SECONDS` - Reset stuck tasks after N seconds (default: 7200)
-- `ATLAS_DEFAULT_BRANCH` - Override auto-detected default branch (default: auto)
-- `ATLAS_NOTIFY_TELEGRAM` - Enable Telegram notifications (default: true)
-- `ATLAS_CLI` - AI provider: claudecode (default) | opencode | codex
-
-## AI Provider Support
-
-Atlas supports multiple AI providers:
-
-- **Claude Code** (claudecode) - Default, best for interactive `atlas plan`
-- **OpenCode** (opencode) - Alternative for autonomous execution
-- **Codex** (codex) - Alternative provider for plan/review/run
-
-### Implementation Details
-
-The provider is selected via (in order of priority):
-1. `--cli <provider>` flag
-2. `ATLAS_CLI` environment variable
-3. Default: claudecode
-
-### Code Changes
-
-When modifying provider-related code:
-- Maintain backward compatibility (default remains claudecode)
-- Skills are installed via `scripts/postinstall.js` to `~/.claude/skills/`, `~/.config/opencode/skills/`, and `~/.codex/skills/`
-- Validation happens early (fails fast if selected CLI not installed)
-- Use conditional invocation based on `ATLAS_CLI` variable
-
-## NPM Package
-
-- **Scope:** `@jxtools/atlas`
-- **Install:** `npm install -g @jxtools/atlas`
-- **Update:** `npm update -g @jxtools/atlas`
-- **Entry point:** `atlas.sh` (via `bin` field in package.json)
-- **ATLAS_HOME:** Resolves dynamically from script location (supports npm symlinks)
-- **Versioning:** `package.json` version is the source of truth, keep in sync with CHANGELOG.md
-
-## Conventions
-
-- Conventional Commits in English
-- Prompt changes: edit `prompt.md`, keep algorithm section in sync with `atlas.sh`
-- Template changes: edit files in `templates/`, they're copied on `atlas init`
-- **CLAUDE.md and AGENTS.md must stay in sync** (identical content, different filenames for different providers)
-
-## Bash Gotchas (set -e)
-
-- **`((var++))` crashes when var=0**: Post-increment returns 0 → bash treats as failure. Use `var=$((var + 1))` instead.
-- **`local` only inside functions**: Not valid in top-level for-loops or case blocks.
-- **Function order matters**: Define functions before first call (no hoisting like JS).
-- **Version lives in `package.json`**: `atlas.sh` reads it via `json_get`. Hardcoded value is fallback only.
-
-## GitFlow & Releases
-
-### Development Workflow (MANDATORY)
-
-**NEVER commit directly to main.** Always follow this flow:
-
-1. Create branch from main: `git checkout -b [type]/[description]`
-2. Make changes and commits on that branch
-3. Update CHANGELOG.md and package.json with suggested version (see SemVer below)
-4. Push branch: `git push -u origin [branch]`
-5. Create PR: `gh pr create --title "..." --body "..."`
-6. Merge with squash: `gh pr merge --squash --delete-branch --admin`
-7. Return to main: `git checkout main && git pull`
-
-### Versioning
-
-**Before creating the PR, ALWAYS:**
-1. Suggest version according to SemVer
-2. Ask the user: "New version (e.g., 1.5.0) or goes to Unreleased?"
-3. Update CHANGELOG.md and package.json accordingly
-
-**SemVer rules:**
-- **patch** (1.4.1): bug fixes, refactors
-- **minor** (1.5.0): new features, backwards compatible
-- **major** (2.0.0): breaking changes
-
-**GitHub Action** publishes to NPM automatically when a new version in `package.json` is detected on main.
+Create a branch, implement and verify changes, update version/changelog, push,
+and create a PR using gh. Stop at the open PR unless merging is authorized.
+GitHub Actions publishes a new package version automatically after merge to main.
