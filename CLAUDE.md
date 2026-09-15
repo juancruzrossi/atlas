@@ -4,7 +4,8 @@
 
 - Run `npm test` and `npm run check` before creating a PR; all checks must pass.
 - Never commit or push directly to main. Work on a feature/fix branch and use PRs.
-- Use Conventional Commits in English. Respond to the user in Spanish.
+- Respond to the user in Spanish. Always write public repository content in English, including documentation, examples, prompts, user-facing messages, commit messages, and PR titles/descriptions.
+- Use Conventional Commits in English. Keep README.md consistent with the implementation whenever behavior changes, including the Ralph loop and recovery contract.
 - Only merge when requested. Use squash, `--admin`, and `--delete-branch` with `gh pr merge`.
 - Before creating a PR, suggest a SemVer version and ask whether to use that version or Unreleased.
 - Update package.json, package-lock.json, and CHANGELOG.md together for a release. Every change merged to main needs an appropriate version bump.
@@ -13,8 +14,11 @@
 
 ## Product and architecture
 
-Atlas is distributed as `@jxtools/atlas`. It executes Markdown backlog tasks with
-Claude Code, OpenCode, or Codex and leaves an integration PR open for human review.
+Atlas is distributed as `@jxtools/atlas`. Its core is a bounded Ralph loop: a fresh
+agent invocation implements one Markdown backlog task, the runtime verifies and
+persists the result, then repeats. Project files carry context between iterations.
+It supports Claude Code, OpenCode, or Codex and leaves an integration PR open for
+human review.
 The default provider remains claudecode.
 
 - `atlas.sh`: small symlink-aware npm entry point, delegates to Node.
@@ -61,6 +65,7 @@ logs, doctor, clean, update, help. JSON output is supported for status/logs/diag
 review is deterministic and read-only; --dry-run is retained for compatibility.
 
 Config priority: CLI flags > ATLAS_* environment > .atlas/config.json > defaults.
+An explicit gateTimeout overrides ATLAS_TIMEOUT for gates; see the README table.
 Keep provider differences isolated in lib/providers.js. Prompt, skills, README,
 and runner contracts must agree whenever execution behavior changes.
 

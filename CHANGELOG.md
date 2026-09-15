@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [4.0.0] - 2026-09-14
 
 ### Changed
+- Document the Ralph loop as the core workflow: fresh agent context, persistent project state, independently verified tasks, and explicit recovery after failure. Keep public documentation and PR content in English.
 - Replace the monolithic Bash loop with a dependency-free Node runtime and focused modules; retain the npm command and shell entry point.
 - Atlas now owns task selection, validated Markdown transitions, explicit quality gates, commits, and a single integration PR that stays open for review.
 - Use a provider-independent JSON task result plus process exit status and independently executed gates; completion promises no longer control the loop.
