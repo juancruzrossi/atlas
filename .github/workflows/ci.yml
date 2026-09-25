@@ -8,35 +8,24 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ['18', '24']
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
+          node-version: ${{ matrix.node }}
       - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-
-      - name: Install dev dependencies
-        run: npm install --ignore-scripts
-
-      - name: Verify atlas.sh fallback version
         run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          FALLBACK_VERSION=$(grep -Eo 'ATLAS_VERSION=\"[0-9]+\.[0-9]+\.[0-9]+\"' atlas.sh | head -1 | cut -d'"' -f2)
-
-          if [ "$PACKAGE_VERSION" != "$FALLBACK_VERSION" ]; then
-            echo "package.json version ($PACKAGE_VERSION) does not match atlas.sh fallback ($FALLBACK_VERSION)"
-            exit 1
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            brew install shellcheck
+          else
+            sudo apt-get update && sudo apt-get install -y shellcheck
           fi
-
-      - name: Run shellcheck
-        run: shellcheck atlas.sh notify-telegram.sh
-
-      - name: Run tests
-        run: npm test
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      - run: npm pack --dry-run

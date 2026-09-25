@@ -1,287 +1,158 @@
-<p align="center">
-  <h1 align="center">ATLAS</h1>
-  <p align="center"><strong>Autonomous Task Loop Agent System</strong></p>
-  <p align="center">
-    <em>Let AI coding agents work through your backlog while you focus on what matters</em>
-  </p>
-</p>
+# Atlas
 
-<p align="center">
-  <a href="#install">Install</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#commands">Commands</a> •
-  <a href="#how-it-works">How It Works</a> •
-  <a href="#configuration">Configuration</a>
-</p>
-
----
-
-## What is Atlas?
-
-Atlas is an **A**utonomous **T**ask **L**oop **A**gent **S**ystem that processes tasks from a markdown backlog using AI coding agents. You define what needs to be done, Atlas handles everything else: branches, code, quality checks, PRs, and merges.
-
----
+Atlas runs a **Ralph loop** ([Geoffrey Huntley's technique](https://ghuntley.com/ralph/))
+over a Markdown backlog: start a coding agent with fresh context, implement one
+task, verify the result, save progress, and repeat. It supports Claude Code,
+OpenCode, and Codex, and opens one PR that stays open for review.
 
 ## Install
+
+Requirements: Node.js 18+, Git, and an installed, authenticated provider, on
+Linux or macOS. PR publication also needs an `origin` remote and an
+authenticated GitHub CLI (`gh`).
 
 ```bash
 npm install -g @jxtools/atlas
 ```
 
-If your environment requires an explicit npm registry:
+## Quick start
 
-```bash
-npm install -g @jxtools/atlas --registry https://registry.npmjs.org/
-```
+Run these from your project, starting on its base branch (`main` or similar):
 
-## Update
+1. `atlas init` (add `--cli codex` or `--cli opencode` to save a provider other
+   than the default `claudecode`).
+2. `atlas plan "Add authentication"` (interactive) or edit `.atlas/backlog.md` by hand.
+3. `atlas 10` - implement and verify up to 10 tasks.
 
-```bash
-atlas update
-```
+Set verification commands in `.atlas/config.json` (`gates`), e.g. `["npm test"]`,
+if you want Atlas to run them before accepting a task as done; with no gates
+Atlas relies on the agent's own result.
 
-### Requirements
+Atlas creates `atlas/<timestamp>` from the current branch (or reuses it if you
+are already on one) and commits `.atlas/` changes there itself; you do not
+commit them yourself first.
 
-- **Node.js 18+** (for npm installation)
-- **AI Provider** (at least one):
-  - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (default, recommended)
-  - [OpenCode](https://opencode.ai)
-  - [Codex](https://github.com/openai/codex)
-- **Git** (optional - enables branches, PRs, and commits)
+## How a run works
 
-### AI Provider Configuration
+Each iteration:
 
-Atlas supports multiple AI providers:
+1. Picks the IN_PROGRESS task, or the first TODO otherwise.
+2. Starts a fresh agent invocation with the task, its spec, and the previous
+   attempt's error, if any; Atlas does not resume prior conversations.
+3. Requires a JSON result (`status: "done"` or `"blocked"`) and every
+   configured gate to pass, if any; a completion phrase in the output alone
+   never advances the queue.
+4. On failure, retries with the error fed back, up to `retries` attempts.
+5. DONE: records progress and commits. Exhausted: discards uncommitted
+   changes, moves the task to DELAYED with a `Reason`, and commits that.
+6. Pushes and opens or updates the PR, if `origin` exists.
+7. Repeats with the next task until none remain or the iteration limit hits.
 
-| Provider | Flag | Documentation |
-|----------|------|---------------|
-| Claude Code (default) | `--cli claudecode` | [docs.anthropic.com/claude-code](https://docs.anthropic.com/claude-code) |
-| OpenCode | `--cli opencode` | [opencode.ai/docs](https://opencode.ai/docs) |
-| Codex (OpenAI) | `--cli codex` | [developers.openai.com/codex/cli](https://developers.openai.com/codex/cli) |
-
-```bash
-# Use Claude Code (default)
-atlas 25
-
-# Use OpenCode
-atlas --cli opencode 25
-
-# Use Codex
-atlas --cli codex 25
-
-# Or set environment variable (persists across sessions)
-export ATLAS_CLI=codex
-atlas 25
-```
-
-**Recommendation**: Use Claude Code for `atlas plan` (interactive mode works best). For autonomous execution (`atlas [N]`), any provider works.
-
----
-
-## Quick Start
-
-```bash
-cd your-project
-atlas init
-
-# Recommended flow (AI plans + executes)
-atlas plan "add user authentication with JWT"
-atlas 5
-```
-
-If you prefer manual planning, you can still edit `.atlas/backlog.md` directly:
-
-```bash
-# Manual flow (you write tasks)
-# Edit .atlas/backlog.md with your tasks
-atlas
-```
-
----
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `atlas init` | Initialize `.atlas/` in current project |
-| `atlas plan "..."` | Interactive feature planning (interview -> spec -> tasks) |
-| `atlas [N]` | Run N iterations autonomously (default: 25) |
-| `atlas review [--dry-run]` | Audit Atlas state and auto-fix inconsistencies (or report only with dry-run) |
-| `atlas resume [N]` | Resume an interrupted session from its active integration branch/PR |
-| `atlas clean [--all]` | Clean runtime artifacts from `.atlas/` |
-| `atlas logs [--tail N]` | Show iteration logs (default: last 10) |
-| `atlas logs --failed` | Show only failed iterations |
-| `atlas logs --search <pat>` | Search logs for pattern |
-| `atlas status` | Show task counts and active session info |
-| `atlas doctor` | Check Atlas installation and dependencies |
-| `atlas update` | Show how to update via NPM |
-| `atlas help` | Show help |
-
----
-
-## Planning Mode
-
-For complex features, use `atlas plan` to interview and decompose before autonomous execution:
-
-```bash
-atlas plan "add user authentication with JWT"
-# -> Interactive interview about requirements
-# -> Generates spec in .atlas/specs/
-# -> Creates tasks in backlog with **Spec:** field
-
-atlas 5
-# -> Executes 5 tasks autonomously (no human intervention)
-# -> Each task reads the full spec for context (integral view)
-```
-
----
-
-## Resuming Sessions
-
-If Atlas is interrupted (quota limit, error, Ctrl+C), resume with:
-
-```bash
-atlas resume      # Continue with default iterations
-atlas resume 5    # Continue with 5 iterations
-```
-
-Resume will:
-1. Find the active integration branch
-2. Verify PR is not merged/closed
-3. Continue processing tasks from backlog
-
----
-
-## Reviewing Work
-
-After Atlas completes (or is interrupted), audit and fix issues:
-
-```bash
-atlas review           # Detect and auto-fix issues
-atlas review --dry-run # Report only, no changes
-atlas --cli opencode review --dry-run # Same, using OpenCode
-```
-
-Review checks for:
-- Tasks stuck in wrong state (multiple IN_PROGRESS, etc.)
-- Orphaned PRs not merged to integration
-- Backlog out of sync with merged PRs
-- Uncommitted changes and unpushed commits
-
-Auto-fixes safe issues and reports those requiring manual intervention.
-
----
-
-## Cleaning Runtime Files
-
-Use `clean` to remove local runtime artifacts:
-
-```bash
-atlas clean       # Remove .atlas/runs/*.log and temporary files
-atlas clean --all # Also reset activity/errors logs and stale session metadata
-```
-
----
+Rerunning `atlas` on the same `atlas/*` branch resumes where it stopped.
+Ctrl+C or SIGTERM stops the current attempt immediately: exit 130, work kept
+in place, task still IN_PROGRESS.
 
 ## Configuration
 
-Override defaults with `ATLAS_` environment variables:
+| Source | Key | Default | Notes |
+| --- | --- | --- | --- |
+| `.atlas/config.json` | `provider` | `claudecode` | or `codex`, `opencode` |
+| `.atlas/config.json` | `gates` | `[]` | optional; shell commands run from the project root; empty means no gates run |
+| `.atlas/config.json` | `iterations` | `25` | a positional argument overrides it |
+| `.atlas/config.json` | `timeout` | `1200` | seconds, per agent invocation and per gate |
+| `.atlas/config.json` | `retries` | `3` | attempts per task before it moves to DELAYED |
+| `.atlas/config.json` | `base` | Git fallback: `origin/HEAD`, else `main` | target branch for the PR |
+| CLI | `--cli <provider>` | - | sets `provider` for this run and saves it to `config.json` for later runs |
+| CLI | positional `N` (`atlas [run] N`) | - | overrides `iterations` for this run |
+| Environment | `ATLAS_TELEGRAM_BOT`, `ATLAS_TELEGRAM_CHAT` | unset | both required to send a Telegram message when a run ends normally |
 
-```bash
-export ATLAS_CLI=claudecode         # AI provider: claudecode (default), opencode, or codex
-export ATLAS_MAX_ITERATIONS=25      # Max iterations per run
-export ATLAS_TIMEOUT=1200           # Timeout per iteration (seconds)
-export ATLAS_STALE_SECONDS=7200     # Reset stuck tasks (seconds, 0 to disable)
-export ATLAS_DEFAULT_BRANCH=main    # Override auto-detected default branch
-export ATLAS_NOTIFY_TELEGRAM=true   # Enable Telegram notifications
-export ATLAS_TELEGRAM_BOT="token"   # Telegram bot token
-export ATLAS_TELEGRAM_CHAT="id"     # Telegram chat ID
+Example `config.json`:
+
+```json
+{ "provider": "codex", "iterations": 25, "timeout": 1200, "retries": 3, "gates": ["npm test"] }
 ```
 
----
+Limits must be positive integers; unknown configuration keys are rejected.
 
-## How It Works
+## Commands
 
-```
-for each iteration:
-    1. Resume task in IN_PROGRESS, or pick first from TODO
-    2. [git] Create branch from integration: [type]/[TASK_ID]-[description]
-    3. Move to IN_PROGRESS [git: + commit]
-    4. Implement task
-    5. Run quality gates (from CLAUDE.md)
-    6. [git] Create PR -> merge (squash) to integration branch
-    7. Move to DONE [git: + commit]
-    8. Write to progress.txt and guardrails.md
-    9. If error -> log to errors.log, move back to TODO
-   10. If no tasks -> exit loop
-```
+| Command | Behavior |
+| --- | --- |
+| `atlas init` | Create missing `.atlas/` state and configuration |
+| `atlas plan "..."` | Interactive interview, write a specification, add tasks |
+| `atlas [run] [N]` | Run up to N implementation iterations |
+| `atlas status [--json]` | Show task counts, current branch, DELAYED reasons |
+| `atlas help` | Show usage |
 
-**Modes:**
-- **Git mode** (default): Creates integration branch, PRs merge there, human reviews before main
-- **Local mode**: Works without git - changes stay in working directory
+`status` is read-only and works while a run holds the lock.
 
-**Features:**
-- Context files pre-loaded (backlog, guardrails, progress, CLAUDE.md)
-- Commits state changes immediately (crash recovery) [git mode]
-- Stale tasks auto-reset to TODO after timeout
+## Backlog
 
----
-
-## Backlog Format
+`.atlas/backlog.md` is the task source of truth:
 
 ```markdown
 ## TODO
-### HIGH-001: Task title
-- **Category:** feature
-- **Description:** What needs to be done
+
+### AUTH-001: Add sign-in
+- **Description:** Authenticate existing users.
+- **Acceptance:** Valid credentials create a session; invalid credentials are rejected.
 
 ## IN_PROGRESS
 
 ## DONE
-### HIGH-000: Completed task
-- **Completed:** 2026-01-15
-- **PR:** #1
 
 ## DELAYED
-### LOW-001: Blocked task
-- **Reason:** Why it's blocked
 ```
 
----
+- Each of the four sections must appear exactly once; task IDs must be unique.
+- At most one task may be IN_PROGRESS at a time; Atlas resumes it before any TODO.
+- An optional `- **Spec:** .atlas/specs/auth.md` field links a task to a
+  specification inside the project; `atlas plan` writes both automatically.
+- Code fences and HTML comments do not count as tasks.
+- DELAYED tasks are not retried automatically; move a task back to TODO by
+  hand once you have addressed its `Reason`.
 
-## Project Structure
+## Files in `.atlas/`
 
-After `atlas init` (`specs/` appears after `atlas plan`):
-
-```
-your-project/
-├── CLAUDE.md              # Project rules + quality gates (you create this)
-└── .atlas/
-    ├── backlog.md         # Task list
-    ├── progress.txt       # Learnings from completed tasks
-    ├── guardrails.md      # Rules from past errors
-    ├── errors.log         # Failure log
-    ├── activity.log       # Run history
-    ├── specs/             # Feature specs (created by atlas plan)
-    └── runs/              # Iteration logs
-```
-
----
-
-## Quality Gates
-
-Define in your project's `CLAUDE.md`:
-
-```markdown
-## Quality Gates
-- `npm run build` must pass
-- `npm test` must pass
+```text
+config.json                        Provider, limits, retries, and gates
+backlog.md                         Editable task queue
+guardrails.md                      Lessons from observed failures
+progress.txt                       Verified task summaries
+specs/                             Feature specifications
+runtime.lock                       Active run ownership (gitignored)
+runs/<ID>-<attempt>.prompt.md      Prompt sent for that attempt (gitignored)
+runs/<ID>-<attempt>.log            Streamed provider/gate output (gitignored)
+runs/<ID>-<attempt>.result.json    Provider's JSON result (gitignored)
 ```
 
-Atlas reads CLAUDE.md before each task.
+Track everything except `runtime.lock` and `runs/` in Git.
 
----
+## Exit codes
 
-## License
+| Code | Meaning |
+| --- | --- |
+| `0` | No runnable tasks remain |
+| `1` | Invalid configuration, arguments, or a Git/GitHub error |
+| `2` | Iteration limit reached with TODO or IN_PROGRESS tasks pending |
+| `130` | Interrupted |
 
-ISC
+## Safety
+
+Providers run with broad, non-interactive permissions (e.g.
+`--dangerously-skip-permissions`); use trusted projects and environments. The
+runtime lock and branch checks coordinate Atlas runs, not isolate a misbehaving agent.
+
+## Development
+
+```bash
+npm ci --ignore-scripts
+npm test
+npm run check
+npm pack --dry-run
+```
+
+Tests use fake providers and temporary local Git repositories; they never call
+real providers or send real notifications. See [AGENTS.md](AGENTS.md) for contribution rules.
+
+ISC license.
