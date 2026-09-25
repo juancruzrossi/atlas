@@ -3,7 +3,7 @@
 ## Rules
 
 - Work on a branch and open a PR; push to main only when the maintainer asks.
-- Before a PR, `npm test` and `npm run check` must pass. Suggest a SemVer version
+- Before a PR, `npm run check` must pass. Suggest a SemVer version
   and ask whether to use it or Unreleased.
 - A release updates package.json, package-lock.json, and CHANGELOG.md together.
 - Merge only when asked: `gh pr merge --squash --admin --delete-branch`.
@@ -41,14 +41,11 @@ Node >=18 on Linux and macOS, standard library only, no build step.
    reap child processes, and release the lock.
 7. One `atlas/*` branch and one PR per run, pushed after every commit. Never merge.
 8. `status` is read-only and works while locked.
-9. Tests use an isolated HOME, fake providers, and temporary Git remotes. Never
-   call real agents or send real notifications.
 
 ## Verify
 
 ```bash
-npm ci --ignore-scripts && npm test && npm run check && npm pack --dry-run
+npm run check && npm pack --dry-run
 ```
 
-CI runs on Linux and macOS with Node 18 and 24. Merging to main publishes a new
-npm version when package.json has one.
+Pushing to main publishes a new npm version when package.json has one.

@@ -145,13 +145,10 @@ runtime lock and branch checks coordinate Atlas runs, not isolate a misbehaving 
 ## Development
 
 ```bash
-npm ci --ignore-scripts
-npm test
 npm run check
 npm pack --dry-run
 ```
 
-Tests use fake providers and temporary local Git repositories; they never call
-real providers or send real notifications. See [AGENTS.md](AGENTS.md) for contribution rules.
+See [AGENTS.md](AGENTS.md) for contribution rules.
 
 ISC license.

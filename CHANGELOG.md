@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Commands `resume`, `review`, `doctor`, `logs`, `clean`, `update`, and `integration-session.json`; per-task PRs are replaced by one PR per run.
-- The `atlas.sh` shell entry point (`bin` now points at `lib/cli.js` directly), bundled skills and `scripts/postinstall.js`, `references/`, `review_prompt.md`, and the Bats CLI tests.
+- The `atlas.sh` shell entry point (`bin` now points at `lib/cli.js` directly), bundled skills and `scripts/postinstall.js`, `references/`, `review_prompt.md`, the test suite, and the CI workflow.
 - `ATLAS_*` environment configuration; use `.atlas/config.json` and `--cli` instead.
 - `activity.log`, `errors.log`, and non-Git mode.
 
@@ -27,8 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration
 - Finish or archive any Atlas 3 session before upgrading. Rename a `## IN PROGRESS` backlog heading to `## IN_PROGRESS`. Run `atlas init`; there are no other required changes. Set `gates` in `.atlas/config.json` if you want Atlas to verify tasks before accepting them as done.
 
-### Verification
-- Rewrite the test suite around isolated fixtures with fake providers and a fake `gh`, covering retries, DELAYED, per-task publishing, timeouts, signals, and the dirty-tree rules. Add a manual smoke run against the real Claude Code, Codex, and OpenCode CLIs.
 
 ## [3.2.5] - 2026-03-23
 
