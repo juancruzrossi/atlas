@@ -4,8 +4,6 @@
 # Configure via environment variables:
 #   ATLAS_TELEGRAM_BOT  - Telegram bot token
 #   ATLAS_TELEGRAM_CHAT - Chat/group ID
-#
-# To disable: export ATLAS_NOTIFY_TELEGRAM=false
 
 BOT_TOKEN="${ATLAS_TELEGRAM_BOT:-}"
 CHAT_ID="${ATLAS_TELEGRAM_CHAT:-}"
@@ -57,28 +55,9 @@ STATUS="${STATUS#"${STATUS%%[![:space:]]*}"}"
 PENDING="${PENDING_LINE#Pending: }"
 PENDING="${PENDING#"${PENDING%%[![:space:]]*}"}"
 
-# Handle empty summary (output capture failed)
-if [[ -z "$TASK" && -z "$STATUS" ]]; then
-    TASK="Output not captured"
-    STATUS="UNKNOWN"
-    PENDING="?"
-fi
-
-# Determine status emoji (pattern matching for statuses with extra info like "SKIPPED (reason)")
-STATUS_EMOJI="⏳"
-if [[ "$STATUS" == DONE* ]]; then
-    STATUS_EMOJI="✅"
-elif [[ "$STATUS" == FAILED* ]]; then
-    STATUS_EMOJI="❌"
-elif [[ "$STATUS" == SKIPPED* ]]; then
-    STATUS_EMOJI="⏭️"
-elif [[ "$STATUS" == STOPPED* ]]; then
-    STATUS_EMOJI="🛑"
-elif [[ "$STATUS" == RETRY* ]]; then
-    STATUS_EMOJI="🔄"
-elif [[ "$STATUS" == UNKNOWN* ]]; then
-    STATUS_EMOJI="❓"
-fi
+# Status is DONE or FAILED
+STATUS_EMOJI="❌"
+[[ "$STATUS" == DONE ]] && STATUS_EMOJI="✅"
 
 SAFE_PROJECT_NAME=$(html_escape "$PROJECT_NAME")
 SAFE_TASK=$(html_escape "${TASK:-No task}")

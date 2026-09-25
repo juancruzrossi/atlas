@@ -25,10 +25,6 @@ test('ignore Markdown examples, comments and unrelated sections', () => {
   assert.deepEqual(counts(parse(text)), { TODO: 1, IN_PROGRESS: 1, DONE: 0, DELAYED: 0 })
 })
 
-test('legacy IN PROGRESS heading is accepted', () => {
-  assert.equal(next(parse(doc.replace('IN_PROGRESS', 'IN PROGRESS'))).id, 'T-2')
-})
-
 test('reject missing/duplicate sections, duplicate IDs, and multiple active tasks', () => {
   for (const text of [doc.replace('## DONE', '## Other'), doc + '\n## TODO\n', doc.replace('T-2:', 'T-1:'), doc.replace('### T-2: Active', '### T-2: Active\n### T-3: Active')]) {
     assert.throws(() => parse(text))

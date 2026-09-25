@@ -1,6 +1,5 @@
 # Logs
 *.log
-errors_log.txt
 
 # macOS
 .DS_Store
@@ -10,9 +9,6 @@ errors_log.txt
 .vscode/
 *.swp
 *.swo
-
-# Debug
-debug/
 
 # Docs (local drafts, not published)
 docs/

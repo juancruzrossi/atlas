@@ -108,8 +108,7 @@ Limits must be positive integers; unknown configuration keys are rejected.
 - At most one task may be IN_PROGRESS at a time; Atlas resumes it before any TODO.
 - An optional `- **Spec:** .atlas/specs/auth.md` field links a task to a
   specification inside the project; `atlas plan` writes both automatically.
-- Code fences and HTML comments do not count as tasks. The legacy `IN PROGRESS`
-  heading is also accepted.
+- Code fences and HTML comments do not count as tasks.
 - DELAYED tasks are not retried automatically; move a task back to TODO by
   hand once you have addressed its `Reason`.
 
