@@ -46,6 +46,16 @@ ${fs.readFileSync(path.join(__dirname, 'provider-fixture.js'), 'utf8')}
   assert.match(fs.readFileSync(`${f.cwd}/.atlas/runs/${secondPrompt}`, 'utf8'), /Previous attempt failed/)
 })
 
+test('a stale result file from an earlier run is not accepted when the agent writes nothing', t => {
+  const f = fixture(t, { retries: 1 })
+  f.write('.atlas/config.json', { gates: ['true'], timeout: 2, retries: 1 })
+  fs.mkdirSync(`${f.cwd}/.atlas/runs`, { recursive: true })
+  fs.writeFileSync(`${f.cwd}/.atlas/runs/T-1-1.result.json`, JSON.stringify({ taskId: 'T-1', status: 'done', summary: 'Stale summary from a previous run.' }))
+  const r = f.call(['1'], { FAKE_BEHAVIOR: 'silent' })
+  assert.equal(r.status, 0, r.stderr + r.stdout)
+  assert.equal(JSON.parse(f.call(['status', '--json']).stdout).tasks.DELAYED, 1)
+})
+
 test('the agent editing backlog.md is reverted before Atlas records the result', t => {
   const f = fixture(t)
   const r = f.call(['1'], { FAKE_BEHAVIOR: 'tamper' })

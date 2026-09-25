@@ -12,6 +12,7 @@ const behavior = process.env.FAKE_BEHAVIOR || 'done'
 console.log('provider output is streamed')
 if (behavior === 'failure') { console.log('<promise>COMPLETE</promise>'); process.exit(42) }
 if (behavior === 'promise') { console.log('<promise>COMPLETE</promise>'); process.exit(0) }
+if (behavior === 'silent') process.exit(0)
 if (behavior === 'hang') {
   const child = spawn(process.execPath, ['-e', 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000)'], { stdio: 'inherit' })
   fs.writeFileSync('.atlas/child-pid', String(child.pid))
