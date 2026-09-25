@@ -16,7 +16,9 @@ fi
 ITERATION="$1"
 MAX_ITERATIONS="$2"
 PROJECT_NAME="$3"
-SUMMARY="$4"
+TASK="$4"
+STATUS="$5"
+PENDING="$6"
 
 html_escape() {
     local value="$1"
@@ -41,19 +43,6 @@ progress_bar() {
 
 PROGRESS=$(progress_bar "$ITERATION" "$MAX_ITERATIONS")
 TIMESTAMP=$(date "+%H:%M")
-
-# Extract fields from summary
-TASK_LINE=$(echo "$SUMMARY" | grep -E "^Task:" | head -1)
-STATUS_LINE=$(echo "$SUMMARY" | grep -E "^Status:" | head -1)
-PENDING_LINE=$(echo "$SUMMARY" | grep -E "^Pending:" | tail -1)
-
-# Clean values
-TASK="${TASK_LINE#Task: }"
-TASK="${TASK#"${TASK%%[![:space:]]*}"}"
-STATUS="${STATUS_LINE#Status: }"
-STATUS="${STATUS#"${STATUS%%[![:space:]]*}"}"
-PENDING="${PENDING_LINE#Pending: }"
-PENDING="${PENDING#"${PENDING%%[![:space:]]*}"}"
 
 # Status is DONE or FAILED
 STATUS_EMOJI="❌"
