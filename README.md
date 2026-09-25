@@ -1,9 +1,8 @@
 # Atlas
 
-Atlas runs a **Ralph loop** ([Geoffrey Huntley's technique](https://ghuntley.com/ralph/))
-over a Markdown backlog: start a coding agent with fresh context, implement one
-task, verify the result, save progress, and repeat. It supports Claude Code,
-OpenCode, and Codex, and opens one PR that stays open for review.
+**Autonomous Task Loop Agent System.** Atlas works through your Markdown backlog
+on its own: one task at a time, a fresh agent for each, verified, committed, and
+pushed to a single PR for your review. Works with Claude Code, Codex, and OpenCode.
 
 ## Install
 

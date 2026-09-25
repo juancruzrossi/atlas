@@ -5,7 +5,7 @@
 - Run `npm test` and `npm run check` before creating a PR; all checks must pass.
 - Never commit or push directly to main. Work on a feature/fix branch and use PRs.
 - Respond to the user in Spanish. Always write public repository content in English, including documentation, examples, prompts, user-facing messages, commit messages, and PR titles/descriptions.
-- Use Conventional Commits in English. Keep README.md consistent with the implementation whenever behavior changes, including the Ralph loop and recovery contract.
+- Use Conventional Commits in English. Keep README.md consistent with the implementation whenever behavior changes, including the loop and recovery contract.
 - Only merge when requested. Use squash, `--admin`, and `--delete-branch` with `gh pr merge`.
 - Before creating a PR, suggest a SemVer version and ask whether to use that version or Unreleased.
 - Update package.json, package-lock.json, and CHANGELOG.md together for a release. Every change merged to main needs an appropriate version bump.
@@ -14,7 +14,7 @@
 
 ## Product and architecture
 
-Atlas is distributed as `@jxtools/atlas`. Its core is a bounded Ralph loop: a fresh
+Atlas is distributed as `@jxtools/atlas`. Its core is a bounded autonomous loop: a fresh
 agent invocation implements one Markdown backlog task, the runtime verifies and
 persists the result, then repeats, retrying failures before giving up on a task.
 It supports Claude Code, OpenCode, or Codex and leaves one PR open for human review.

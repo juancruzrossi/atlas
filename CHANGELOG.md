@@ -623,6 +623,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release
-- Ralph Wiggum loop implementation
+- Autonomous task loop implementation
 - Basic backlog processing
 - GitFlow integration (branch, PR, merge)

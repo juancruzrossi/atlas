@@ -1,7 +1,7 @@
 {
   "name": "@jxtools/atlas",
   "version": "4.0.0",
-  "description": "A small, retrying Ralph loop that implements a Markdown backlog with Claude Code, OpenCode, or Codex",
+  "description": "Autonomous Task Loop Agent System: works through your Markdown backlog with Claude Code, Codex, or OpenCode",
   "bin": {
     "atlas": "lib/cli.js"
   },
