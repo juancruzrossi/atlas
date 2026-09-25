@@ -27,6 +27,16 @@ test('without an origin remote, Atlas never calls git push or gh', t => {
   assert.equal(fs.existsSync(`${f.cwd}/.atlas/github-calls`), false)
 })
 
+test('on a base branch that does not exist locally, a run with no remote still succeeds', t => {
+  const f = fixture(t, { git: false })
+  f.git('init', '-b', 'master')
+  f.git('add', '.')
+  f.git('commit', '-m', 'chore: initial')
+  const r = f.call(['1'])
+  assert.equal(r.status, 0, r.stderr + r.stdout)
+  assert.equal(JSON.parse(f.call(['status', '--json']).stdout).tasks.DONE, 1)
+})
+
 test('a dirty tree outside .atlas is rejected before any task or branch change', t => {
   const f = fixture(t)
   f.write('user-file.txt', 'user work')
