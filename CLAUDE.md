@@ -1,89 +1,54 @@
 # Atlas development instructions
 
-## Critical rules
+## Rules
 
-- Run `npm test` and `npm run check` before creating a PR; all checks must pass.
-- Never commit or push directly to main. Work on a feature/fix branch and use PRs.
-- Respond to the user in Spanish. Always write public repository content in English, including documentation, examples, prompts, user-facing messages, commit messages, and PR titles/descriptions.
-- Use Conventional Commits in English. Keep README.md consistent with the implementation whenever behavior changes, including the loop and recovery contract.
-- Only merge when requested. Use squash, `--admin`, and `--delete-branch` with `gh pr merge`.
-- Before creating a PR, suggest a SemVer version and ask whether to use that version or Unreleased.
-- Update package.json, package-lock.json, and CHANGELOG.md together for a release. Every change merged to main needs an appropriate version bump.
-- AGENTS.md and CLAUDE.md must remain byte-for-byte identical.
-- Code comments should be brief, necessary, and in English.
+- Work on a branch and open a PR; push to main only when the maintainer asks.
+- Before a PR, `npm test` and `npm run check` must pass. Suggest a SemVer version
+  and ask whether to use it or Unreleased.
+- A release updates package.json, package-lock.json, and CHANGELOG.md together.
+- Merge only when asked: `gh pr merge --squash --admin --delete-branch`.
+- Write all repository content in English: code, docs, prompts, messages,
+  commits (Conventional Commits), and PRs.
+- Keep README.md, prompt.md, and plan_prompt.md consistent with the code.
+- Keep AGENTS.md and CLAUDE.md byte-for-byte identical.
+- Keep code comments brief, necessary, and in English.
 
-## Product and architecture
+## Architecture
 
-Atlas is distributed as `@jxtools/atlas`. Its core is a bounded autonomous loop: a fresh
-agent invocation implements one Markdown backlog task, the runtime verifies and
-persists the result, then repeats, retrying failures before giving up on a task.
-It supports Claude Code, OpenCode, or Codex and leaves one PR open for human review.
-The default provider remains claudecode.
+Node >=18 on Linux and macOS, standard library only, no build step.
 
-- `lib/cli.js`: argument parsing, config loading, the runtime lock, and commands
-  (`init`, `plan`, `run`, `status`, `help`). Also the npm `bin` entry point.
-- `lib/backlog.js`: Markdown parsing, task selection, validated atomic transitions.
-- `lib/agent.js`: the provider table (Claude Code, Codex, OpenCode) and the process
-  supervisor used for both provider invocations and quality gates.
-- `lib/git.js`: branch-as-state helpers, commits, and single open PR publication.
-- `lib/loop.js`: the retry loop that ties backlog, agent, and git together.
-- `prompt.md`, `plan_prompt.md`: implementation and interactive planning contracts.
+- `lib/cli.js`: commands, config, and the run lock; the npm `bin` entry point.
+- `lib/backlog.js`: Markdown backlog parsing and task transitions.
+- `lib/agent.js`: provider table and process supervisor. Keep provider
+  differences here.
+- `lib/git.js`: `atlas/*` branch, commits, and PR publishing.
+- `lib/loop.js`: the task loop.
+- `prompt.md`, `plan_prompt.md`: agent contracts.
 
-The runtime uses Node standard-library modules with no production dependencies or
-build step. Support Node >=18 on Linux and macOS. Bash is only needed for the
-Telegram script and shell gates; no envsubst or GNU utilities required.
+## Invariants
 
-## Runtime invariants
+1. The Markdown backlog is the source of truth; the `atlas/*` branch is the
+   only run state.
+2. At most one task is IN_PROGRESS, and it runs before any TODO.
+3. Atlas owns the backlog, config, commits, and PRs. Agents implement the task
+   and write the result JSON.
+4. DONE needs a successful agent exit, a valid `done` result, and passing gates
+   when configured. Never trust stdout.
+5. A failed attempt is retried up to `retries` times with the error fed back.
+   Then Atlas discards the changes, moves the task to DELAYED with a `Reason`,
+   and continues.
+6. SIGINT/SIGTERM stop immediately, keep work, and exit 130. Enforce timeouts,
+   reap child processes, and release the lock.
+7. One `atlas/*` branch and one PR per run, pushed after every commit. Never merge.
+8. `status` is read-only and works while locked.
+9. Tests use an isolated HOME, fake providers, and temporary Git remotes. Never
+   call real agents or send real notifications.
 
-1. Markdown is the task source of truth; there is no session JSON. The current
-   Git branch (`atlas/*`) is the only run state Atlas keeps.
-2. Exactly one task can be IN_PROGRESS. It is selected before any TODO task.
-3. Atlas owns backlog, config, Git commits, and PRs. Providers implement tasks
-   and write a structured result to a per-attempt path.
-4. DONE requires a valid matching result, successful provider exit, and passing
-   independently executed gates, if any are configured. Never trust stdout
-   completion markers.
-5. A failed attempt is retried up to `retries` times with the previous error fed
-   back to the next attempt. Once exhausted, discard the task's uncommitted
-   changes and move it to DELAYED with a `Reason`; the loop continues.
-6. Respect task timeouts and cancellation (SIGINT/SIGTERM stop immediately and
-   keep work, exit 130), reap provider descendants, and release locks. Do not
-   leave background processes after tests or development work.
-7. Keep main unchanged; use one `atlas/*` branch and one open PR per run, pushed
-   after every commit. Never merge PRs in the runtime.
-8. `status` must remain read-only and work while locked.
-9. Tests must use isolated HOME, fake providers, and temporary Git remotes. Never
-   invoke paid agents or send messages to real recipients as a test.
-
-## State and commands
-
-`.atlas/` contains config.json, backlog.md, guardrails.md, progress.txt, specs/,
-runtime.lock, and runs/. Runtime files are ignored by Git.
-
-Commands: init, plan, run (also bare numeric iterations), status, help. JSON
-output is supported for status.
-
-Config priority: CLI flags > .atlas/config.json > defaults. Keys: provider,
-gates, iterations, timeout, retries, base. `gates` defaults to `[]`; with no
-gates configured the loop skips gate execution and relies on the agent's
-result. `--cli <provider>` is saved into config.json's `provider` key on
-init, run, and plan, so later runs keep it without the flag; `status` never
-writes config. Keep provider differences isolated in lib/agent.js. Prompt,
-README, and loop contracts must agree whenever execution behavior changes.
-
-## Verification and delivery
+## Verify
 
 ```bash
-npm ci --ignore-scripts
-npm test
-npm run check
-npm pack --dry-run
+npm ci --ignore-scripts && npm test && npm run check && npm pack --dry-run
 ```
 
-Node tests exercise actual CLI invocations, state transitions, signals, and Git
-delivery using isolated fixtures with fake providers. CI runs Linux/macOS on
-Node 18/24.
-
-Create a branch, implement and verify changes, update version/changelog, push,
-and create a PR using gh. Stop at the open PR unless merging is authorized.
-GitHub Actions publishes a new package version automatically after merge to main.
+CI runs on Linux and macOS with Node 18 and 24. Merging to main publishes a new
+npm version when package.json has one.
