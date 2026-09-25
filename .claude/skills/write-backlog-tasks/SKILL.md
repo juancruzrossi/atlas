@@ -59,7 +59,7 @@ This skill is invoked when the user wants to add tasks to the Atlas backlog (`.a
 
 For tasks generated from `atlas plan`:
 ```markdown
-- **Spec:** .atlas/specs/spec-YYYYMMDD-HHMMSS.md
+- **Spec:** .atlas/specs/<feature>.md
 ```
 
 For tasks with dependencies:
