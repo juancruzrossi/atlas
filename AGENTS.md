@@ -16,58 +16,56 @@
 
 Atlas is distributed as `@jxtools/atlas`. Its core is a bounded Ralph loop: a fresh
 agent invocation implements one Markdown backlog task, the runtime verifies and
-persists the result, then repeats. Project files carry context between iterations.
-It supports Claude Code, OpenCode, or Codex and leaves an integration PR open for
-human review.
+persists the result, then repeats, retrying failures before giving up on a task.
+It supports Claude Code, OpenCode, or Codex and leaves one PR open for human review.
 The default provider remains claudecode.
 
-- `atlas.sh`: small symlink-aware npm entry point, delegates to Node.
-- `lib/cli.js`, `lib/commands.js`: argument validation and user commands.
-- `lib/config.js`: flags, ATLAS_* environment, and project config precedence.
+- `lib/cli.js`: argument parsing, config loading, the runtime lock, and commands
+  (`init`, `plan`, `run`, `status`, `help`). Also the npm `bin` entry point.
 - `lib/backlog.js`: Markdown parsing, task selection, validated atomic transitions.
-- `lib/storage.js`: atomic state files, execution locks, event log.
-- `lib/process.js`, `lib/providers.js`: provider adapters and process supervision.
-- `lib/runner.js`: task execution, independent gates, finalization, recovery.
-- `lib/git.js`: branch/HEAD invariants, commit journal, single open PR publication.
+- `lib/agent.js`: the provider table (Claude Code, Codex, OpenCode) and the process
+  supervisor used for both provider invocations and quality gates.
+- `lib/git.js`: branch-as-state helpers, commits, and single open PR publication.
+- `lib/loop.js`: the retry loop that ties backlog, agent, and git together.
 - `prompt.md`, `plan_prompt.md`: implementation and interactive planning contracts.
-- `scripts/postinstall.js`: installs bundled skills into available provider directories.
 
 The runtime uses Node standard-library modules with no production dependencies or
 build step. Support Node >=18 on Linux and macOS. Bash is only needed for the
-entry point, Telegram script, and shell gates; no envsubst or GNU utilities required.
+Telegram script and shell gates; no envsubst or GNU utilities required.
 
 ## Runtime invariants
 
-1. Markdown is the task source of truth; config/session JSON never replace it.
-2. Exactly one task can be IN_PROGRESS. Resume it before selecting the first TODO.
-3. Atlas owns backlog, config, session, Git commits, and PRs. Providers implement
-   tasks and write a structured result to a per-attempt path.
+1. Markdown is the task source of truth; there is no session JSON. The current
+   Git branch (`atlas/*`) is the only run state Atlas keeps.
+2. Exactly one task can be IN_PROGRESS. It is selected before any TODO task.
+3. Atlas owns backlog, config, Git commits, and PRs. Providers implement tasks
+   and write a structured result to a per-attempt path.
 4. DONE requires a valid matching result, successful provider exit, and passing
    independently executed gates. Never trust stdout completion markers.
-5. Stop and preserve work on failure. Do not retry mutations automatically or
-   reset tasks based on timestamps. Recovery must use current state evidence.
-6. Respect task timeouts and cancellation, reap provider descendants, and release
-   locks. Do not leave background processes after tests or development work.
-7. Keep main unchanged; use one integration branch and PR per session. Never merge
-   PRs in the runtime. Leave the working branch active on failure and completion.
-8. Public status/log/diagnostic commands must remain read-only and work while locked.
+5. A failed attempt is retried up to `retries` times with the previous error fed
+   back to the next attempt. Once exhausted, discard the task's uncommitted
+   changes and move it to DELAYED with a `Reason`; the loop continues.
+6. Respect task timeouts and cancellation (SIGINT/SIGTERM stop immediately and
+   keep work, exit 130), reap provider descendants, and release locks. Do not
+   leave background processes after tests or development work.
+7. Keep main unchanged; use one `atlas/*` branch and one open PR per run, pushed
+   after every commit. Never merge PRs in the runtime.
+8. `status` must remain read-only and work while locked.
 9. Tests must use isolated HOME, fake providers, and temporary Git remotes. Never
    invoke paid agents or send messages to real recipients as a test.
 
 ## State and commands
 
 `.atlas/` contains config.json, backlog.md, guardrails.md, progress.txt, specs/,
-session.json, runtime.lock, runs/, activity.log, and errors.log. Runtime files are
-ignored by Git. Legacy integration-session.json requires explicit migration.
+runtime.lock, and runs/. Runtime files are ignored by Git.
 
-Commands: init, plan, run (also bare numeric iterations), resume, review, status,
-logs, doctor, clean, update, help. JSON output is supported for status/logs/diagnostics.
-review is deterministic and read-only; --dry-run is retained for compatibility.
+Commands: init, plan, run (also bare numeric iterations), status, help. JSON
+output is supported for status.
 
-Config priority: CLI flags > ATLAS_* environment > .atlas/config.json > defaults.
-An explicit gateTimeout overrides ATLAS_TIMEOUT for gates; see the README table.
-Keep provider differences isolated in lib/providers.js. Prompt, skills, README,
-and runner contracts must agree whenever execution behavior changes.
+Config priority: CLI flags > .atlas/config.json > defaults. Keys: provider,
+gates, iterations, timeout, retries, base. Keep provider differences isolated
+in lib/agent.js. Prompt, README, and loop contracts must agree whenever
+execution behavior changes.
 
 ## Verification and delivery
 
@@ -78,9 +76,9 @@ npm run check
 npm pack --dry-run
 ```
 
-Node tests exercise actual CLI invocations, state transitions, signals, Git
-recovery, and package installation using isolated fixtures. Bats retains public
-CLI regression coverage. CI runs Linux/macOS on Node 18/24.
+Node tests exercise actual CLI invocations, state transitions, signals, and Git
+delivery using isolated fixtures with fake providers. CI runs Linux/macOS on
+Node 18/24.
 
 Create a branch, implement and verify changes, update version/changelog, push,
 and create a PR using gh. Stop at the open PR unless merging is authorized.

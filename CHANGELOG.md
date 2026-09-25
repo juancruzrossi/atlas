@@ -5,24 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - 2026-09-14
+## [4.0.0] - 2026-09-25
 
 ### Changed
-- Document the Ralph loop as the core workflow: fresh agent context, persistent project state, independently verified tasks, and explicit recovery after failure. Keep public documentation and PR content in English.
-- Replace the monolithic Bash loop with a dependency-free Node runtime and focused modules; retain the npm command and shell entry point.
-- Atlas now owns task selection, validated Markdown transitions, explicit quality gates, commits, and a single integration PR that stays open for review.
-- Use a provider-independent JSON task result plus process exit status and independently executed gates; completion promises no longer control the loop.
-- Stream output to terminal and disk; enforce deadlines and terminate process groups on cancellation or timeout.
-- Persist local and Git sessions, finalization checkpoints, and commit journals for recovery without discarding work or rerunning completed tasks after publication failures.
-- Make review read-only and deterministic, recognize Git worktrees, validate options/configuration early, and expose structured status/logs/diagnostics.
-- Require explicit gates, opt in to Telegram notifications, preserve branch position, and return exit code 2 when the task budget is exhausted with pending work.
-- Remove time-based task resets, implicit retries, runtime skill copying, and the dependency on envsubst, jq, GNU timeout, and platform-specific date/sort behavior.
+- Rewrite Atlas as five small, readable modules (`lib/{cli,backlog,agent,git,loop}.js`), replacing the previous nine-module runtime and its session/commit-journal recovery system. The current Git branch is now the only run state: Atlas resumes on an `atlas/*` branch, or creates one, instead of tracking a `session.json`.
+- A failed attempt (bad provider exit, invalid result, `blocked` status, or a failing gate) is retried with the previous error fed back to the agent, up to `retries` (default 3) attempts. Once exhausted, Atlas discards the task's uncommitted changes and moves it to DELAYED with a `Reason`, then continues with the next task instead of stopping the run.
+- Push and update the pull request after every commit, not only at the end of a run, so finished work survives an interrupted session. Atlas still never merges a PR.
+- Require Git with at least one commit; drop the non-Git ("local") mode.
+
+### Removed
+- Commands `resume`, `review`, `doctor`, `logs`, `clean`, `update`, and the `session.json`-based recovery they inspected.
+- The `atlas.sh` shell entry point (`bin` now points at `lib/cli.js` directly), bundled skills and `scripts/postinstall.js`, `references/`, `review_prompt.md`, and the Bats CLI tests.
+- `ATLAS_*` environment configuration; use `.atlas/config.json` and `--cli` instead.
+- `activity.log`, `errors.log`, and non-Git mode.
+
+### Kept
+- Telegram end-of-run notifications via `notify-telegram.sh`, when `ATLAS_TELEGRAM_BOT` and `ATLAS_TELEGRAM_CHAT` are both set.
 
 ### Migration
-- Finish or archive legacy integration sessions before upgrading; run `atlas init`, configure `.atlas/config.json`, and commit the project state. See README for complete migration steps.
+- Finish or archive any Atlas 3 session before upgrading. Run `atlas init` and set `gates` in `.atlas/config.json`; there are no other required changes.
 
 ### Verification
-- Preserve public CLI regression tests and add isolated Node tests for Markdown state, providers, gates, signals, concurrency, Git recovery, and package installation.
+- Rewrite the test suite around isolated fixtures with fake providers and a fake `gh`, covering retries, DELAYED, per-task publishing, timeouts, signals, and the dirty-tree rules. Add a manual smoke run against the real Claude Code, Codex, and OpenCode CLIs.
 
 ## [3.2.5] - 2026-03-23
 

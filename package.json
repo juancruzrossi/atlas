@@ -1,26 +1,20 @@
 {
   "name": "@jxtools/atlas",
   "version": "4.0.0",
-  "description": "Verified task execution with resumable state and human-reviewed pull requests",
+  "description": "A small, retrying Ralph loop that implements a Markdown backlog with Claude Code, OpenCode, or Codex",
   "bin": {
-    "atlas": "atlas.sh"
+    "atlas": "lib/cli.js"
   },
   "files": [
-    "atlas.sh",
     "lib/",
     "prompt.md",
     "plan_prompt.md",
-    "review_prompt.md",
     "notify-telegram.sh",
     "templates/",
-    "references/",
-    "skills/",
-    "scripts/",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "postinstall": "node scripts/postinstall.js",
-    "test": "node --test tests/*.test.js && bats tests/",
+    "test": "node --test tests/*.test.js",
     "check": "node scripts/check.js"
   },
   "publishConfig": {
@@ -45,8 +39,5 @@
   "license": "ISC",
   "engines": {
     "node": ">=18.0.0"
-  },
-  "devDependencies": {
-    "bats": "^1.13.0"
   }
 }
