@@ -4,11 +4,8 @@ Atlas automatically appends entries here after completing each task.
 
 Format:
 ```
-## [DATE] - [TASK_ID]: [Title]
-Summary: [1-2 sentences of what was done]
-PR: #[number] (omit if local mode)
-Notes: [any gotchas for future iterations]
+## [TASK_ID]: [Title]
+[1-2 sentences of what was done and how it was verified]
 ```
 
 ================================================================================
-

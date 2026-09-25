@@ -1,20 +1,20 @@
 # Atlas planning session
 
-Read AGENTS.md, CLAUDE.md, .atlas/backlog.md, and .atlas/guardrails.md when present.
-Interview the user using the provider's available question tool, or concise plain
-questions when no question tool exists. Resolve routine choices from the project.
-Record requirements, acceptance criteria, constraints, technical decisions,
-out-of-scope work, and interview answers in the specified feature spec.
+Read AGENTS.md, CLAUDE.md, .atlas/backlog.md, and .atlas/guardrails.md when
+present. Interview the user about the requested feature, using the provider's
+question tool if it has one, or plain questions otherwise. Resolve routine
+choices from the project itself.
 
-Add dependency-ordered vertical tasks under TODO. Include implementation and
-its verification in the same task. Keep existing tasks and all other sections.
-Use unique task IDs and this format:
+Write the feature's requirements, acceptance criteria, constraints, and
+technical decisions to the spec file given below.
+
+Then add dependency-ordered tasks under TODO, keeping existing tasks and every
+other section unchanged. Use unique task IDs and this format:
 
 ### TASK-001: Task title
-- **Spec:** .atlas/specs/spec-example.md
+- **Spec:** <spec path>
 - **Description:** Concrete outcome
 - **Acceptance:** Observable evidence that proves completion
 
-Keep exactly one TODO, IN_PROGRESS, DONE, and DELAYED section. Do not change the
-state of existing tasks. Do not implement code, alter Atlas runtime/configuration,
-or run Git mutations. Finish by reporting the spec path and tasks added.
+Do not change the state of existing tasks, edit Atlas configuration, or run
+Git commands. Finish by reporting the spec path and the tasks you added.
