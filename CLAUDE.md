@@ -41,7 +41,8 @@ Telegram script and shell gates; no envsubst or GNU utilities required.
 3. Atlas owns backlog, config, Git commits, and PRs. Providers implement tasks
    and write a structured result to a per-attempt path.
 4. DONE requires a valid matching result, successful provider exit, and passing
-   independently executed gates. Never trust stdout completion markers.
+   independently executed gates, if any are configured. Never trust stdout
+   completion markers.
 5. A failed attempt is retried up to `retries` times with the previous error fed
    back to the next attempt. Once exhausted, discard the task's uncommitted
    changes and move it to DELAYED with a `Reason`; the loop continues.
@@ -63,9 +64,12 @@ Commands: init, plan, run (also bare numeric iterations), status, help. JSON
 output is supported for status.
 
 Config priority: CLI flags > .atlas/config.json > defaults. Keys: provider,
-gates, iterations, timeout, retries, base. Keep provider differences isolated
-in lib/agent.js. Prompt, README, and loop contracts must agree whenever
-execution behavior changes.
+gates, iterations, timeout, retries, base. `gates` defaults to `[]`; with no
+gates configured the loop skips gate execution and relies on the agent's
+result. `--cli <provider>` is saved into config.json's `provider` key on
+init, run, and plan, so later runs keep it without the flag; `status` never
+writes config. Keep provider differences isolated in lib/agent.js. Prompt,
+README, and loop contracts must agree whenever execution behavior changes.
 
 ## Verification and delivery
 

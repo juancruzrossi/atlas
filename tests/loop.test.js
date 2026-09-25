@@ -79,12 +79,26 @@ test('an empty queue does not invoke a provider', t => {
   assert.equal(fs.existsSync(`${f.cwd}/.atlas/provider-calls`), false)
 })
 
-test('invalid arguments and missing gates fail before invoking the provider', t => {
+test('invalid arguments fail before invoking the provider', t => {
   const f = fixture(t)
   for (const args of [['0'], ['run', '-1'], ['--unknown'], ['run', '1', '2']]) assert.notEqual(f.call(args).status, 0)
-  f.write('.atlas/config.json', { gates: [] })
-  assert.match(f.call(['1']).stderr, /at least one quality gate/)
-  assert.equal(fs.existsSync(`${f.cwd}/.atlas/provider-calls`), false)
+})
+
+test('empty gates run no gate and still finish the task on a valid result', t => {
+  const f = fixture(t)
+  f.write('.atlas/config.json', { gates: [], timeout: 2, retries: 1 })
+  const r = f.call(['1'])
+  assert.equal(r.status, 0, r.stderr + r.stdout)
+  assert.match(r.stdout, /No gates configured/)
+  assert.equal(JSON.parse(f.call(['status', '--json']).stdout).tasks.DONE, 1)
+})
+
+test('empty gates still delay a blocked task', t => {
+  const f = fixture(t, { retries: 1 })
+  f.write('.atlas/config.json', { gates: [], timeout: 2, retries: 1 })
+  const r = f.call(['1'], { FAKE_BEHAVIOR: 'blocked' })
+  assert.equal(r.status, 0, r.stderr + r.stdout)
+  assert.equal(JSON.parse(f.call(['status', '--json']).stdout).tasks.DELAYED, 1)
 })
 
 test('the runtime lock excludes a competing run and is released on SIGINT', async t => {

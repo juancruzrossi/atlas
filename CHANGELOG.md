@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A failed attempt (bad provider exit, invalid result, `blocked` status, or a failing gate) is retried with the previous error fed back to the agent, up to `retries` (default 3) attempts. Once exhausted, Atlas discards the task's uncommitted changes and moves it to DELAYED with a `Reason`, then continues with the next task instead of stopping the run.
 - Push and update the pull request after every commit, not only at the end of a run, so finished work survives an interrupted session. Atlas still never merges a PR.
 - Require Git with at least one commit; drop the non-Git ("local") mode.
+- `--cli <provider>` now saves `provider` into `.atlas/config.json` on `init`, `run`, and `plan`, so later runs keep it without repeating the flag; `status` never writes config.
+- `gates` is now optional (default `[]`); with no gates configured, Atlas relies on the agent's own result instead of refusing to start.
 
 ### Removed
 - Commands `resume`, `review`, `doctor`, `logs`, `clean`, `update`, and the `session.json`-based recovery they inspected.
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Telegram end-of-run notifications via `notify-telegram.sh`, when `ATLAS_TELEGRAM_BOT` and `ATLAS_TELEGRAM_CHAT` are both set.
 
 ### Migration
-- Finish or archive any Atlas 3 session before upgrading. Run `atlas init` and set `gates` in `.atlas/config.json`; there are no other required changes.
+- Finish or archive any Atlas 3 session before upgrading. Run `atlas init`; there are no other required changes. Set `gates` in `.atlas/config.json` if you want Atlas to verify tasks before accepting them as done.
 
 ### Verification
 - Rewrite the test suite around isolated fixtures with fake providers and a fake `gh`, covering retries, DELAYED, per-task publishing, timeouts, signals, and the dirty-tree rules. Add a manual smoke run against the real Claude Code, Codex, and OpenCode CLIs.

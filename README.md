@@ -19,10 +19,14 @@ npm install -g @jxtools/atlas
 
 Run these from your project, starting on its base branch (`main` or similar):
 
-1. `atlas init` - creates `.atlas/` with a config, an empty backlog, and templates.
-2. Set real verification commands in `.atlas/config.json` (`gates`), e.g. `["npm test"]`.
-3. `atlas plan "Add authentication"` (interactive) or edit `.atlas/backlog.md` by hand.
-4. `atlas 10` - implement and verify up to 10 tasks.
+1. `atlas init` (add `--cli codex` or `--cli opencode` to save a provider other
+   than the default `claudecode`).
+2. `atlas plan "Add authentication"` (interactive) or edit `.atlas/backlog.md` by hand.
+3. `atlas 10` - implement and verify up to 10 tasks.
+
+Set verification commands in `.atlas/config.json` (`gates`), e.g. `["npm test"]`,
+if you want Atlas to run them before accepting a task as done; with no gates
+Atlas relies on the agent's own result.
 
 Atlas creates `atlas/<timestamp>` from the current branch (or reuses it if you
 are already on one) and commits `.atlas/` changes there itself; you do not
@@ -36,8 +40,8 @@ Each iteration:
 2. Starts a fresh agent invocation with the task, its spec, and the previous
    attempt's error, if any; Atlas does not resume prior conversations.
 3. Requires a JSON result (`status: "done"` or `"blocked"`) and every
-   configured gate to pass; a completion phrase in the output alone never
-   advances the queue.
+   configured gate to pass, if any; a completion phrase in the output alone
+   never advances the queue.
 4. On failure, retries with the error fed back, up to `retries` attempts.
 5. DONE: records progress and commits. Exhausted: discards uncommitted
    changes, moves the task to DELAYED with a `Reason`, and commits that.
@@ -53,12 +57,12 @@ in place, task still IN_PROGRESS.
 | Source | Key | Default | Notes |
 | --- | --- | --- | --- |
 | `.atlas/config.json` | `provider` | `claudecode` | or `codex`, `opencode` |
-| `.atlas/config.json` | `gates` | `[]` | required; shell commands run from the project root |
+| `.atlas/config.json` | `gates` | `[]` | optional; shell commands run from the project root; empty means no gates run |
 | `.atlas/config.json` | `iterations` | `25` | a positional argument overrides it |
 | `.atlas/config.json` | `timeout` | `1200` | seconds, per agent invocation and per gate |
 | `.atlas/config.json` | `retries` | `3` | attempts per task before it moves to DELAYED |
 | `.atlas/config.json` | `base` | Git fallback: `origin/HEAD`, else `main` | target branch for the PR |
-| CLI | `--cli <provider>` | - | overrides `provider` for this run |
+| CLI | `--cli <provider>` | - | sets `provider` for this run and saves it to `config.json` for later runs |
 | CLI | positional `N` (`atlas [run] N`) | - | overrides `iterations` for this run |
 | Environment | `ATLAS_TELEGRAM_BOT`, `ATLAS_TELEGRAM_CHAT` | unset | both required to send a Telegram message when a run ends normally |
 

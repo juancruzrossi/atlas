@@ -11,7 +11,7 @@ merge, reset, or stash. Do not start background services that outlive you.
 Implement the task and run relevant checks yourself. If something prevents
 completion, leave the partial work in place and report status "blocked" with
 the exact reason. Do not claim "done" based only on a passing build; Atlas will
-independently run its configured quality gates before recording the task done.
+independently run any configured quality gates before recording the task done.
 
 Write the result JSON to the exact file given below:
 {"taskId": "<task id>", "status": "done or blocked", "summary": "what changed and how it was verified"}

@@ -33,3 +33,24 @@ test('an unknown config key is rejected before any provider runs', t => {
   assert.match(f.call(['1']).stderr, /Unknown config key/)
   assert.equal(fs.existsSync(`${f.cwd}/.atlas/provider-calls`), false)
 })
+
+test('init --cli saves the provider into config.json, preserving other keys', t => {
+  const f = fixture(t)
+  const before = f.json('.atlas/config.json')
+  assert.equal(f.call(['init', '--cli', 'codex']).status, 0)
+  const after = f.json('.atlas/config.json')
+  assert.equal(after.provider, 'codex')
+  assert.equal(after.gates.length, before.gates.length)
+  assert.equal(after.timeout, before.timeout)
+  assert.equal(after.retries, before.retries)
+})
+
+test('--cli on a run persists the provider for later runs without the flag', t => {
+  const f = fixture(t)
+  f.write('.atlas/backlog.md', f.read('.atlas/backlog.md').replace('## IN_PROGRESS', '### T-2: Second task\n- **Acceptance:** implementation.txt exists\n\n## IN_PROGRESS'))
+  assert.equal(f.call(['--cli', 'opencode', '1']).status, 2)
+  assert.equal(f.json('.atlas/config.json').provider, 'opencode')
+  assert.equal(f.call(['1']).status, 0)
+  const calls = f.read('.atlas/provider-calls').trim().split('\n').map(JSON.parse)
+  assert.deepEqual(calls[1].slice(0, 2), ['run', '--auto'])
+})
