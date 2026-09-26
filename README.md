@@ -72,7 +72,7 @@ logged to `.atlas/runs/*.log`.
 | `.atlas/config.json` | `provider` | `claudecode` | or `codex`, `opencode` |
 | `.atlas/config.json` | `gates` | `[]` | optional; shell commands run from the project root; empty means no gates run |
 | `.atlas/config.json` | `iterations` | `25` | a positional argument overrides it |
-| `.atlas/config.json` | `timeout` | `1200` | seconds, per agent invocation and per gate |
+| `.atlas/config.json` | `timeout` | `3600` | seconds, per agent invocation and per gate |
 | `.atlas/config.json` | `retries` | `3` | attempts per task before it moves to DELAYED |
 | `.atlas/config.json` | `base` | Git fallback: `origin/HEAD`, else `main` | target branch for the PR |
 | CLI | `--cli <provider>` | - | sets `provider` for this run and saves it to `config.json` for later runs |
@@ -82,7 +82,7 @@ logged to `.atlas/runs/*.log`.
 Example `config.json`:
 
 ```json
-{ "provider": "codex", "iterations": 25, "timeout": 1200, "retries": 3, "gates": ["npm test"] }
+{ "provider": "codex", "iterations": 25, "timeout": 3600, "retries": 3, "gates": ["npm test"] }
 ```
 
 Limits must be positive integers; unknown configuration keys are rejected.
