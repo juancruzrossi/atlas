@@ -21,7 +21,7 @@ Node >=18 on Linux and macOS, standard library only, no build step.
 - `lib/backlog.js`: Markdown backlog parsing and task transitions.
 - `lib/agent.js`: provider table and process supervisor. Keep provider
   differences here.
-- `lib/git.js`: `atlas/*` branch, commits, and PR publishing.
+- `lib/git.js`: `atlas/*` task branches, commits, and stacked PR publishing.
 - `lib/loop.js`: the task loop.
 - `prompt.md`, `plan_prompt.md`: agent contracts.
 
@@ -39,7 +39,7 @@ Node >=18 on Linux and macOS, standard library only, no build step.
    and continues.
 6. SIGINT/SIGTERM stop immediately, keep work, and exit 130. Enforce timeouts,
    reap child processes, and release the lock.
-7. One `atlas/*` branch and one PR per run, pushed after every commit. Never merge.
+7. One stack per run: one `atlas/<run>/<task>` branch and PR per task with code, pushed after every commit. Never merge.
 8. `status` is read-only and works while locked.
 
 ## Verify

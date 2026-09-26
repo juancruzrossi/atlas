@@ -2,13 +2,15 @@
 
 **Autonomous Task Loop Agent System.** Atlas works through your Markdown backlog
 on its own: one task at a time, a fresh agent for each, verified, committed, and
-pushed to a single PR for your review. Works with Claude Code, Codex, and OpenCode.
+delivered as its own PR, chained into a native GitHub stack for your review.
+Works with Claude Code, Codex, and OpenCode.
 
 ## Install
 
 Requirements: Node.js 18+, Git, and an installed, authenticated provider, on
-Linux or macOS. PR publication also needs an `origin` remote and an
-authenticated GitHub CLI (`gh`).
+Linux or macOS. Publishing stacked PRs also needs an `origin` remote and an
+authenticated GitHub CLI (`gh`); Atlas installs the `gh-stack` extension itself
+the first time it needs it.
 
 ```bash
 npm install -g @jxtools/atlas
@@ -27,29 +29,41 @@ Set verification commands in `.atlas/config.json` (`gates`), e.g. `["npm test"]`
 if you want Atlas to run them before accepting a task as done; with no gates
 Atlas relies on the agent's own result.
 
-Atlas creates `atlas/<timestamp>` from the current branch (or reuses it if you
-are already on one) and commits `.atlas/` changes there itself; you do not
-commit them yourself first.
+Atlas creates one `atlas/<run>/<TASK-ID>-<slug>` branch per task, each built on
+top of the previous one, and commits `.atlas/` backlog changes together with
+the task's own commit; you do not commit them yourself first.
 
 ## How a run works
 
 Each iteration:
 
 1. Picks the IN_PROGRESS task, or the first TODO otherwise.
-2. Starts a fresh agent invocation with the task, its spec, and the previous
-   attempt's error, if any; Atlas does not resume prior conversations.
-3. Requires a JSON result (`status: "done"` or `"blocked"`) and every
-   configured gate to pass, if any; a completion phrase in the output alone
-   never advances the queue.
-4. On failure, retries with the error fed back, up to `retries` attempts.
-5. DONE: records progress and commits. Exhausted: discards uncommitted
-   changes, moves the task to DELAYED with a `Reason`, and commits that.
-6. Pushes and opens or updates the PR, if `origin` exists.
-7. Repeats with the next task until none remain or the iteration limit hits.
+2. Creates `atlas/<run>/<TASK-ID>-<slug>` on top of the current stack (or
+   reuses it, if resuming an interrupted task).
+3. Starts a fresh agent invocation with the task, its spec, the other backlog
+   tasks (for context only, not to implement), and the previous attempt's
+   error, if any; Atlas does not resume prior conversations.
+4. Requires a JSON result (`status: "done"` or `"blocked"`, plus a
+   `verification` note) and every configured gate to pass, if any; a
+   completion phrase in the output alone never advances the queue.
+5. On failure, retries with the error fed back, up to `retries` attempts.
+6. DONE with changes outside `.atlas/`: commits `feat(<ID>): <title>` on the
+   task branch, which becomes the new top of the stack, and pushes and
+   opens/updates its PR (fixed title and body, chained into the GitHub stack
+   with `gh stack link`), if `origin` exists.
+7. DONE with no code changes, or exhausted retries (DELAYED with a `Reason`,
+   after discarding uncommitted changes): no branch or PR is created; the
+   backlog change rides on the top PR's `## Notes` section instead.
+8. Repeats with the next task until none remain or the iteration limit hits.
 
-Rerunning `atlas` on the same `atlas/*` branch resumes where it stopped.
-Ctrl+C or SIGTERM stops the current attempt immediately: exit 130, work kept
-in place, task still IN_PROGRESS.
+Rerunning `atlas` on an `atlas/<run>/*` branch resumes that run (the current
+branch's `<run>` segment is reused). Ctrl+C or SIGTERM stops the current
+attempt immediately: exit 130, work kept in place, task still IN_PROGRESS.
+
+Progress is printed to the terminal as one message per task (project, task
+counter and bar, ✅/❌, PR link, pending count) and, when configured, the same
+message is sent to Telegram; the agent's own output is never shown, only
+logged to `.atlas/runs/*.log`.
 
 ## Configuration
 
@@ -63,7 +77,7 @@ in place, task still IN_PROGRESS.
 | `.atlas/config.json` | `base` | Git fallback: `origin/HEAD`, else `main` | target branch for the PR |
 | CLI | `--cli <provider>` | - | sets `provider` for this run and saves it to `config.json` for later runs |
 | CLI | positional `N` (`atlas [run] N`) | - | overrides `iterations` for this run |
-| Environment | `ATLAS_TELEGRAM_BOT`, `ATLAS_TELEGRAM_CHAT` | unset | both required to send a Telegram message when a run ends normally |
+| Environment | `ATLAS_TELEGRAM_BOT`, `ATLAS_TELEGRAM_CHAT` | unset | both required; sends the same progress message shown in the terminal, after every task and once at the end |
 
 Example `config.json`:
 
@@ -116,16 +130,15 @@ Limits must be positive integers; unknown configuration keys are rejected.
 ```text
 config.json                        Provider, limits, retries, and gates
 backlog.md                         Editable task queue
-guardrails.md                      Lessons from observed failures
-progress.txt                       Verified task summaries
 specs/                             Feature specifications
-runtime.lock                       Active run ownership (gitignored)
+runs/runtime.lock                  Active run ownership (gitignored)
 runs/<ID>-<attempt>.prompt.md      Prompt sent for that attempt (gitignored)
 runs/<ID>-<attempt>.log            Streamed provider/gate output (gitignored)
 runs/<ID>-<attempt>.result.json    Provider's JSON result (gitignored)
+runs/pr-<ID>.md                    Rendered PR body for that task (gitignored)
 ```
 
-Track everything except `runtime.lock` and `runs/` in Git.
+Track everything except `runs/` in Git.
 
 ## Exit codes
 
