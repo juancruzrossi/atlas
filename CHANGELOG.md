@@ -5,24 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - 2026-09-25
+## [4.0.0] - 2026-09-26
 
 ### Changed
-- Rewrite Atlas as five small, readable modules (`lib/{cli,backlog,agent,git,loop}.js`), replacing the Bash loop. The current Git branch is now the only run state: Atlas resumes on an `atlas/*` branch, or creates one, instead of tracking a `session.json`.
+- Rewrite Atlas as five small, readable modules (`lib/{cli,backlog,agent,git,loop}.js`), replacing the Bash loop. Git branches are now the only run state: Atlas resumes on an `atlas/<run>/*` branch, or creates one, instead of tracking a `session.json`.
+- Each task with code changes is delivered as its own `atlas/<run>/<TASK-ID>-<slug>` branch and PR, built on top of the previous one and chained into a native GitHub stack (`gh stack link`, installing the `gh-stack` extension automatically). PR bodies follow a fixed format (`Task`, `Acceptance`, `Changes`, `Verification`, `Stack`, `Spec`, and `Notes` when applicable). A task that changes no code, or ends DELAYED, gets no branch or PR of its own; it is committed on the current top of the stack and listed in that PR's `## Notes`.
+- The agent's own output is never shown in the terminal, only logged to `.atlas/runs/*.log`. One renderer builds a single progress message (project, task counter and bar, ✅/❌, PR link, pending count), printed after every task and, when `ATLAS_TELEGRAM_BOT`/`ATLAS_TELEGRAM_CHAT` are set, sent to Telegram via the built-in `fetch`.
+- The agent's result JSON now requires a `verification` field alongside `summary`, used verbatim in the PR body.
+- The planner splits a feature into independent vertical slices: each task is its own reviewable PR, may build on an earlier task, must not depend on a later one, and must not overlap another task's scope; no verification-only tasks. Each agent invocation is told about the other backlog tasks so it does not implement them.
 - A failed attempt (bad provider exit, invalid result, `blocked` status, or a failing gate) is retried with the previous error fed back to the agent, up to `retries` (default 3) attempts. Once exhausted, Atlas discards the task's uncommitted changes and moves it to DELAYED with a `Reason`, then continues with the next task instead of stopping the run.
-- Push and update the pull request after every commit, not only at the end of a run, so finished work survives an interrupted session. Atlas still never merges a PR.
 - Require Git with at least one commit; drop the non-Git ("local") mode.
 - `--cli <provider>` now saves `provider` into `.atlas/config.json` on `init`, `run`, and `plan`, so later runs keep it without repeating the flag; `status` never writes config.
 - `gates` is now optional (default `[]`); with no gates configured, Atlas relies on the agent's own result instead of refusing to start.
+- `.atlas/` is reduced to `backlog.md`, `config.json`, `specs/`, and `runs/` (which now also holds the run lock).
 
 ### Removed
-- Commands `resume`, `review`, `doctor`, `logs`, `clean`, `update`, and `integration-session.json`; per-task PRs are replaced by one PR per run.
+- Commands `resume`, `review`, `doctor`, `logs`, `clean`, `update`, and `integration-session.json`; a single run-level PR is replaced by one stacked PR per task.
 - The `atlas.sh` shell entry point (`bin` now points at `lib/cli.js` directly), bundled skills and `scripts/postinstall.js`, `references/`, `review_prompt.md`, the test suite, and the CI workflow.
 - `ATLAS_*` environment configuration; use `.atlas/config.json` and `--cli` instead.
 - `activity.log`, `errors.log`, and non-Git mode.
-
-### Kept
-- Telegram end-of-run notifications via `notify-telegram.sh`, when `ATLAS_TELEGRAM_BOT` and `ATLAS_TELEGRAM_CHAT` are both set.
+- `.atlas/guardrails.md` and `.atlas/progress.txt`; and `notify-telegram.sh`, replaced by the built-in `fetch`-based notifier.
 
 ### Migration
 - Finish or archive any Atlas 3 session before upgrading. Rename a `## IN PROGRESS` backlog heading to `## IN_PROGRESS`. Run `atlas init`; there are no other required changes. Set `gates` in `.atlas/config.json` if you want Atlas to verify tasks before accepting them as done.
