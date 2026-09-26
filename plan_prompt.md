@@ -1,7 +1,7 @@
 # Atlas planning session
 
-Read AGENTS.md, CLAUDE.md, .atlas/backlog.md, and .atlas/guardrails.md when
-present. Interview the user about the requested feature, using the provider's
+Read AGENTS.md, CLAUDE.md, and .atlas/backlog.md when present. Interview the
+user about the requested feature, using the provider's
 question tool if it has one, or plain questions otherwise. Resolve routine
 choices from the project itself.
 

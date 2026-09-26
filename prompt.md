@@ -1,8 +1,8 @@
 # Atlas implementation task
 
-Implement only the assigned task below, completely. Read AGENTS.md, CLAUDE.md,
-.atlas/guardrails.md, and .atlas/progress.txt when present, and follow the
-project's existing conventions and verification tools.
+Implement only the assigned task below, completely. Read AGENTS.md and
+CLAUDE.md when present, and follow the project's existing conventions and
+verification tools.
 
 Atlas owns task selection, backlog transitions, commits, and PRs. Do not edit
 .atlas/backlog.md or .atlas/config.json. Do not create branches, commit, push,
